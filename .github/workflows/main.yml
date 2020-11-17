@@ -9,14 +9,14 @@ on:
 env:
   # solution path doesn't need slashes unless there it is multiple folders deep
   # solution name does not include extension. .sln is assumed
-  SOLUTION_PATH: PDT.EssentialsPluginTemplate.EPI\
-  SOLUTION_FILE: PDT.EssentialsPluginTemplate.EPI
+  SOLUTION_PATH: \
+  SOLUTION_FILE: ApcEpi
   # Do not edit this, we're just creating it here
   VERSION: 0.0.0-buildtype-buildnumber
   # Defaults to debug for build type
   BUILD_TYPE: Release
   # Defaults to master as the release branch.  Change as necessary
-  RELEASE_BRANCH: master
+  RELEASE_BRANCH: main
 jobs:
   Build_Project:
     runs-on: windows-latest
@@ -33,7 +33,7 @@ jobs:
         shell: powershell
         env:
           TAG_NAME: ${{ github.event.release.tag_name }}
-        run: Write-Output "::set-env name=VERSION::$($Env:TAG_NAME)"
+        run: echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       # Use the version number to set the version of the assemblies
       - name: Update AssemblyInfo.cs
         shell: powershell

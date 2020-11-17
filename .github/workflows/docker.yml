@@ -12,14 +12,14 @@ env:
   # solution path needs slashes (use \). When solution file name and path are put together, it should be a valid path
   # If Solution is in repo root, leave SOLUTION_PATH empty
   # solution name does not include extension. .sln is assumed
-  SOLUTION_PATH: PDT.EssentialsPluginTemplate.EPI\
-  SOLUTION_FILE: PDT.EssentialsPluginTemplate.EPI
+  SOLUTION_PATH: \
+  SOLUTION_FILE: ApcEpi
   # Do not edit this, we're just creating it here
   VERSION: 0.0.0-buildtype-buildnumber
   # Defaults to debug for build type
   BUILD_TYPE: Debug
   # Defaults to master as the release branch.  Change as necessary
-  RELEASE_BRANCH: master
+  RELEASE_BRANCH: main
 jobs:
   Build_Project:
     runs-on: windows-latest
@@ -39,7 +39,7 @@ jobs:
         shell: powershell
         run: |
           $version = ./.github/scripts/GenerateVersionNumber.ps1
-          Write-Output "::set-env name=VERSION::$version"
+          echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       # Use the version number to set the version of the assemblies
       - name: Update AssemblyInfo.cs
         shell: powershell
