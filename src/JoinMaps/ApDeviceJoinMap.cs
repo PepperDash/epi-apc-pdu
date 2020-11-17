@@ -1,8 +1,8 @@
 ﻿using PepperDash.Essentials.Core;
 
-namespace EssentialsPluginTemplateEPI
+namespace ApcEpi.JoinMaps
 {
-	public class EssentialsPluginBridgeJoinMapTemplate : JoinMapBaseAdvanced
+	public class ApDeviceJoinMap : JoinMapBaseAdvanced
 	{
 	    public JoinDataComplete DeviceName = new JoinDataComplete(new JoinData {JoinNumber = 1, JoinSpan = 1},
 	        new JoinMetadata
@@ -12,7 +12,7 @@ namespace EssentialsPluginTemplateEPI
 	            JoinType = eJoinType.Serial
 	        });
 
-		public EssentialsPluginBridgeJoinMapTemplate(uint joinStart) 
+		public ApDeviceJoinMap(uint joinStart) 
             :base(joinStart)
 		{
 		}
