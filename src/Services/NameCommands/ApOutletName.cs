@@ -13,7 +13,7 @@ namespace ApcEpi.Services.NameCommands
             builder.Append(outletNumber);
             builder.Append(" ");
             builder.Append(name);
-            builder.AppendLine();
+            builder.Append("\r");
 
             return builder.ToString();
         }
@@ -23,7 +23,7 @@ namespace ApcEpi.Services.NameCommands
             var builder = new StringBuilder(Command);
             builder.Append(" ");
             builder.Append(outletNumber);
-            builder.AppendLine();
+            builder.Append("\r");
 
             return builder.ToString();
         }

@@ -31,7 +31,7 @@
                 "key": "PowerSupply01",
                 "uid": 74,
                 "name": "PowerSupply01",
-                "type": "Apc8xx",
+                "type": "Ap89xx",
                 "group": "power",
                 "properties": {
                     "control": {
@@ -39,19 +39,25 @@
                         "deviceReadyResponsePattern": "",
                         "method": "ssh",
                         "tcpSshProperties": {
-                            "address": "192.168.10.205",
+                            "address": "172.16.0.44",
                             "port": 22,
                             "autoReconnect": true,
                             "AutoReconnectIntervalMs": 10000,
-                            "username": "",
-                            "password": ""
+                            "username": "apc",
+                            "password": "apc"
                         }
                     },
                     "outlets":
                     {
                         "outlet01" : {
-                            "name": "Outlet 1",
+                            "name": "My First Outlet",
                             "outletIndex": 1,
+                            "delayOn": 30,
+                            "delayOff": 2
+                        },
+			"outlet02" : {
+                            "name": "Another Awesome Outlet",
+                            "outletIndex": 4,
                             "delayOn": 30,
                             "delayOff": 2
                         }
@@ -70,12 +76,12 @@
                             "address": "127.0.0.2",
                             "port": 0
                         },
-                        "ipid": "fd",
+                        "ipid": "03",
                         "method": "ipidTcp"
                     },
                     "devices": [
                         {
-                            "deviceKey": "Coms-Dsp",
+                            "deviceKey": "PowerSupply01",
                             "joinStart": 1
                         }
                     ]

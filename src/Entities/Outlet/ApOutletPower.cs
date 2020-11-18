@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using ApcEpi.Services.PowerCommands;
 using Crestron.SimplSharp;
 using PepperDash.Core;
@@ -20,7 +21,7 @@ namespace ApcEpi.Entities.Outlet
             Key = key;
             Name = name;
             _coms = coms;
-            _matchString = String.Format("{0}: {1}", name, outletIndex);
+            _matchString = ApOutlet.GetMatchString(outletIndex);
 
             PowerIsOnFeedback = new BoolFeedback(
                 key + "-Power",
@@ -35,7 +36,8 @@ namespace ApcEpi.Entities.Outlet
         public enum PowerResponseEnum
         {
             On,
-            Off
+            Off,
+            Unknown
         }
 
         public string Key { get; private set; }
@@ -67,28 +69,37 @@ namespace ApcEpi.Entities.Outlet
                 PowerOn();
         }
 
-        private static PowerResponseEnum GetOutletStatusFromResponse(string response)
+        private static string GetDataPayloadFromResponse(string response)
         {
             response = response.Replace(" ", String.Empty);
-            var splitResponse = response.Split(new[] {':', ' '});
+            var splitResponse = response.Split(':');
+
+            return splitResponse.ElementAtOrDefault(2) ?? String.Empty;
+        }
+
+        private static PowerResponseEnum GetOutletStatusFromResponse(string response)
+        {
+            var data = GetDataPayloadFromResponse(response);
+            if (String.IsNullOrEmpty(data))
+                return PowerResponseEnum.Unknown;
 
             try
             {
-                return (PowerResponseEnum) Enum.Parse(typeof (PowerResponseEnum), splitResponse[3], true);
+                return (PowerResponseEnum) Enum.Parse(typeof (PowerResponseEnum), data, true);
             }
             catch (Exception ex)
             {
-                Debug.Console(1, "Error parsing power response:{0} | {1}", response, ex.Message);
-                throw;
+                return PowerResponseEnum.Unknown;
             }
         }
 
         private void GatherOnLineReceived(object sender, GenericCommMethodReceiveTextArgs args)
         {
-            if (!args.Text.Contains(_matchString))
+            if (!args.Text.StartsWith(_matchString))
                 return;
-
+   
             var status = GetOutletStatusFromResponse(args.Text);
+
             switch (status)
             {
                 case PowerResponseEnum.On:
@@ -96,6 +107,8 @@ namespace ApcEpi.Entities.Outlet
                     break;
                 case PowerResponseEnum.Off:
                     _powerIsOn = false;
+                    break;
+                case PowerResponseEnum.Unknown:
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();

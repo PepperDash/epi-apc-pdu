@@ -12,7 +12,7 @@ namespace ApcEpi.Services.PowerCommands
             var builder = new StringBuilder(PowerOnCommand);
             builder.Append(" ");
             builder.Append(outletIndex);
-            builder.AppendLine();
+            builder.Append("\r");
 
             return builder.ToString();
         }
@@ -22,7 +22,7 @@ namespace ApcEpi.Services.PowerCommands
             var builder = new StringBuilder(PowerOffCommand);
             builder.Append(" ");
             builder.Append(outletIndex);
-            builder.AppendLine();
+            builder.Append("\r");
 
             return builder.ToString();
         }

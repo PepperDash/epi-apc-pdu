@@ -16,10 +16,10 @@ namespace ApcEpi.Entities.Outlet
         {
             Key = key;
             Name = name;
-            _matchString = String.Format("{0}: {1}", name, outletIndex);
+            _matchString = ApOutlet.GetMatchString(outletIndex);
 
             IsOnline = new BoolFeedback(
-                key + "-Power",
+                key + "-Online",
                 () => _isOnline);
 
             InitializeGather(coms);
@@ -31,8 +31,8 @@ namespace ApcEpi.Entities.Outlet
                         IsOnline.FireUpdate();
                     },
                 this,
-                30000,
-                30000);
+                60000,
+                60000);
         }
 
         public BoolFeedback IsOnline { get; private set; }
@@ -42,12 +42,12 @@ namespace ApcEpi.Entities.Outlet
 
         private void GatherOnLineReceived(object sender, GenericCommMethodReceiveTextArgs args)
         {
-            if (!args.Text.Contains(_matchString))
+            if (!args.Text.StartsWith(_matchString))
                 return;
 
             _isOnline = true;
             IsOnline.FireUpdate();
-            _offlineTimer.Reset(30000, 30000);
+            _offlineTimer.Reset(60000, 60000);
         }
 
         private void InitializeGather(ICommunicationReceiver coms)

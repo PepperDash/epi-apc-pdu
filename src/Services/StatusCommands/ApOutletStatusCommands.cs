@@ -15,8 +15,8 @@ namespace ApcEpi.Services.StatusCommands
             var builder = new StringBuilder(Command);
             builder.Append(" ");
             builder.Append(outletIndex);
-            builder.AppendLine();
-
+            builder.Append("\r");
+            
             return builder.ToString();
         }
 
@@ -25,7 +25,7 @@ namespace ApcEpi.Services.StatusCommands
             var builder = new StringBuilder(Command);
             builder.Append(" ");
             builder.Append("all");
-            builder.AppendLine();
+            builder.Append("\r");
 
             return builder.ToString();
         }
