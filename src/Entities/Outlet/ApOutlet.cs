@@ -11,13 +11,13 @@ namespace ApcEpi.Entities.Outlet
         private readonly IOnline _online;
         private readonly IPower _power;
 
-        public ApOutlet(string key, string name, int outletIndex, IBasicCommunication coms)
+        public ApOutlet(string key, string name, int outletIndex, string parentDeviceKey, IBasicCommunication coms)
         {
             Key = key;
             Name = name;
             OutletIndex = outletIndex;
             NameFeedback = new StringFeedback(
-                Key + "-OutletName", 
+                parentDeviceKey + "-" + Key + "-OutletName", 
                 () => String.IsNullOrEmpty(Name) ? Key : Name);
 
             _online = new ApOutletOnline(key, name, outletIndex, coms);

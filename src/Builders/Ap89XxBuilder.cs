@@ -42,7 +42,7 @@ namespace ApcEpi.Builders
         {
             var outlets = config
                 .Outlets
-                .Select(x => new ApOutlet(parentKey + "-" + x.Key, x.Value.Name, x.Value.OutletIndex, coms))
+                .Select(x => new ApOutlet(x.Key, x.Value.Name, x.Value.OutletIndex, parentKey, coms))
                 .ToDictionary<ApOutlet, uint, IApOutlet>(outlet => (uint) outlet.OutletIndex, outlet => outlet);
 
             return new ReadOnlyDictionary<uint, IApOutlet>(outlets);

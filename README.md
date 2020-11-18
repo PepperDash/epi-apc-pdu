@@ -1,22 +1,106 @@
-# Internal Essentials Plugin Template (c) 2020
+# PepperDash Apc Plugin
 
-## License
+> The APC plugin endeavors to provide device control and routing over Apc Type Power devices.
 
-Provided under MIT license
+## Types
 
-## Overview
+1. Ap89xx
 
-Use this repo as a template when creating a new plugin for Essentials. For more information about plugins, refer to the Essentials Wiki [Plugins](https://github.com/PepperDash/Essentials/wiki/Plugins) article.
+## Join Map
 
-## Github Actions
+### Digitals
 
-This repo contains two Github Action workflows that will build this project automatically. Modify the SOLUTION_PATH and SOLUTION_FILE environment variables as needed. Any branches named `feature/*`, `release/*`, `hotfix/*` or `development` will automatically be built with the action and create a release in the repository with a version number based on the latest release on the master branch. If there are no releases yet, the version number will be 0.0.1. The version number will be modified based on what branch triggered the build:
+| Join    | To Simpl               | From Simpl               |
+| ------- | ---------------------- | ------------------------ |
+| 1       | Device Online          | -                        |
+| 2-50    | Reserved For Future    | Reserved For Future      |
+| 51-100  | Power On Feedback      | Power On                 |
+| 100-151 | -                      | Power Off                |
+| 151-200 | -                      | Power Toggle             |
 
-- `feature` branch builds will be tagged with an `alpha` descriptor, with the Action run appended: `0.0.1-alpha-1`
-- `development` branch builds will be tagged with a `beta` descriptor, with the Action run appended: `0.0.1-beta-2`
-- `release` branches will be tagged with an `rc` descriptor, with the Action run appended: `0.0.1-rc-3`
-- `hotfix` branch builds will be tagged with a `hotfix` descriptor, with the Action run appended: `0.0.1-hotfix-4`
+### Analogs
 
-Builds on the Master branch will ONLY be triggered by manually creating a release using the web interface in the repository. They will be versioned with the tag that is created when the release is created. The tags MUST take the form `major.minor.revision` to be compatible with the build process. A tag like `v0.1.0-alpha` is NOT compatabile and may result in the build process failing.
+| Join    | To Simpl               | From Simpl               |
+| ------- | ---------------------- | ------------------------ |
+| 1       | -                      | -                        |
+| 2-50    | -                      | -                        |
+| 51-100  | -                      | -                        |
+| 100-151 | -                      | -                        |
+| 151-200 | -                      | -                        |
 
-If you have any questions about the action, contact Andrew Welker or Neil Dorin.
+### Serials
+
+| Join    | To Simpl               | From Simpl               |
+| ------- | ---------------------- | ------------------------ |
+| 1       | Device Name            | -                        |
+| 2-50    | -                      | -                        |
+| 51-100  | Outlet Name            | -                        |
+| 100-151 | -                      | -                        |
+| 151-200 | -                      | -                        |
+
+### Join Details
+
+---
+
+1. Outlet Name is defined by the Name property in config, and is not necesarily what will be in the APC software; and the APC software requires outlet names to no contain spaces or characters.
+
+## Config Example
+
+```JSON
+{
+    "key": "PowerSupply01",
+    "uid": 74,
+    "name": "PowerSupply01",
+    "type": "Ap89xx",
+    "group": "power",
+    "properties": {
+        "control": {
+            "endOfLineString": "\n",
+            "deviceReadyResponsePattern": "",
+            "method": "ssh",
+            "tcpSshProperties": {
+                "address": "0.0.0.0",
+                "port": 22,
+                "autoReconnect": true,
+                "AutoReconnectIntervalMs": 10000,
+                "username": "apc",
+                "password": "apc"
+            }
+        },
+        "outlets":
+        {
+            "outlet01" : {
+                "name": "My First Outlet",
+                "outletIndex": 1,
+                "delayOn": 30,
+                "delayOff": 2
+            },
+            "outlet02" : {
+                "name": "Another Awesome Outlet",
+                "outletIndex": 4,
+                "delayOn": 30,
+                "delayOff": 2
+            }
+        }
+    }
+}
+```
+
+### Config Details
+
+---
+__Properties:__
+
+#### "outlets"
+
+- Dictionary that defines the outlets to be controlled
+- "key" - defines and sets the name of the outlet in the APC software.  This value must be unique and contain no spaces or specials charaters
+- "name" - defines the name that will be sent to the bridge for a UI friendly name.  If this value is not set it will be the key
+- "outletIndex" - outletNumber to be controlled
+- "delayOn" - NOT YET IMPLEMENTED
+- "delayOff" - NOT YET IMPLEMENTED
+
+## Planned Updates
+
+1. Create a custom StatusMonitor to get more detailed infomation
+1. Add ability to set on/off delays by outlet
