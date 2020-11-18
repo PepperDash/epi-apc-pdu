@@ -39,7 +39,7 @@
                         "deviceReadyResponsePattern": "",
                         "method": "ssh",
                         "tcpSshProperties": {
-                            "address": "172.16.0.44",
+                            "address": "0.0.0.0",
                             "port": 22,
                             "autoReconnect": true,
                             "AutoReconnectIntervalMs": 10000,
@@ -55,14 +55,14 @@
                             "delayOn": 30,
                             "delayOff": 2
                         },
-			"outlet02" : {
-                            "name": "Another Awesome Outlet",
-                            "outletIndex": 4,
-                            "delayOn": 30,
-                            "delayOff": 2
-                        }
-                    }
-                }
+						"outlet02" : {
+							"name": "Another Awesome Outlet",
+							"outletIndex": 4,
+							"delayOn": 30,
+							"delayOff": 2
+						}
+					}
+				}
             },    
             {
                 "key": "BridgeEisc-APC",
