@@ -1,6 +1,7 @@
 ﻿using System;
 using ApcEpi.Abstractions;
 using ApcEpi.Services.NameCommands;
+using ApcEpi.Services.PowerCommands;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 
@@ -8,6 +9,8 @@ namespace ApcEpi.Entities.Outlet
 {
     public class ApOutlet : IApOutlet
     {
+        private readonly IBasicCommunication _coms;
+        private readonly int _outletIndex;
         private readonly IOnline _online;
         private readonly IPower _power;
 
@@ -16,6 +19,9 @@ namespace ApcEpi.Entities.Outlet
             Key = key;
             Name = name;
             OutletIndex = outletIndex;
+            _coms = coms;
+            _outletIndex = outletIndex;
+
             NameFeedback = new StringFeedback(
                 Key + "-OutletName", 
                 () => String.IsNullOrEmpty(Name) ? Key : Name);
@@ -47,6 +53,13 @@ namespace ApcEpi.Entities.Outlet
         public string Key { get; private set; }
         public string Name { get; private set; }
         public StringFeedback NameFeedback { get; private set; }
+
+        public void CyclePower()
+        {
+            var cmd = ApOutletPowerCommands.GetRebootCommand(_outletIndex);
+            _coms.SendText(cmd);
+        }
+
         public int OutletIndex { get; private set; }
 
         public BoolFeedback PowerIsOnFeedback

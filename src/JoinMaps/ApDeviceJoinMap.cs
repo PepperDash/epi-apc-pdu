@@ -95,7 +95,20 @@ namespace ApcEpi.JoinMaps
                 JoinType = eJoinType.Digital
             });
 
+        public JoinDataComplete OutletPowerCycle = new JoinDataComplete(
+            new JoinData
+            {
+                JoinNumber = 250,
+                JoinSpan = 50
+            },
+            new JoinMetadata
+            {
+                Description = "Outlet Power Cycle",
+                JoinCapabilities = eJoinCapabilities.FromSIMPL,
+                JoinType = eJoinType.Digital
+            });
+
         public ApDeviceJoinMap(uint joinStart)
-            : base(joinStart) { }
+            : base(joinStart, typeof(ApDeviceJoinMap)) { }
     }
 }

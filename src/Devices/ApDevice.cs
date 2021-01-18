@@ -135,8 +135,6 @@ namespace ApcEpi.Devices
                     continue;
      
                 var joinActual = outletIndex + joinMap.OutletName.JoinNumber;
-
-                Debug.Console(2, this, "Linking Outlet Name Feedback | OutletIndex:{0}, Join:{1}", outletIndex, joinActual);
                 feedback.LinkInputSig(trilist.StringInput[joinActual]);
             }
 
@@ -148,8 +146,6 @@ namespace ApcEpi.Devices
                     continue;
 
                 var joinActual = outletIndex + joinMap.OutletName.JoinNumber;
-
-                Debug.Console(2, this, "Linking Outlet Online Feedback | OutletIndex:{0}, Join:{1}", outletIndex, joinActual);
                 feedback.LinkInputSig(trilist.BooleanInput[joinActual]);
             }
 
@@ -161,11 +157,7 @@ namespace ApcEpi.Devices
                     continue;
 
                 var joinActual = outletIndex + joinMap.OutletPowerOn.JoinNumber;
-
-                Debug.Console(2, this, "Linking Outlet PowerIsOn Feedback | OutletIndex:{0}, Join:{1}", outletIndex, joinActual);
                 feedback.LinkInputSig(trilist.BooleanInput[joinActual]);
-
-                Debug.Console(2, this, "Linking Outlet PowerOn Method | OutletIndex:{0}, Join:{1}", outletIndex, joinActual);
                 trilist.SetSigTrueAction(joinActual, () => TurnOutletOn(outletIndex));
             }
 
@@ -177,8 +169,6 @@ namespace ApcEpi.Devices
                     continue;
 
                 var joinActual = outletIndex + joinMap.OutletPowerOff.JoinNumber;
-
-                Debug.Console(2, this, "Linking Outlet PowerOff Method | OutletIndex:{0}, Join:{1}", outletIndex, joinActual);
                 trilist.SetSigTrueAction(joinActual, () => TurnOutletOff(outletIndex));
             }
 
@@ -190,9 +180,18 @@ namespace ApcEpi.Devices
                     continue;
 
                 var joinActual = outletIndex + joinMap.OutletPowerToggle.JoinNumber;
-
-                Debug.Console(2, this, "Linking Outlet PowerToggle Method | OutletIndex:{0}, Join:{1}", outletIndex, joinActual);
                 trilist.SetSigTrueAction(joinActual, () => ToggleOutletPower(outletIndex));
+            }
+
+            for (uint x = 0; x < joinMap.OutletPowerCycle.JoinSpan; x++)
+            {
+                var outletIndex = x + 1;
+                BoolFeedback feedback;
+                if (!TryGetOutletPowerFeedback(outletIndex, out feedback))
+                    continue;
+
+                var joinActual = outletIndex + joinMap.OutletPowerToggle.JoinNumber;
+                trilist.SetSigTrueAction(joinActual, () => RebootOutlet(outletIndex));
             }
         }
 
@@ -261,6 +260,19 @@ namespace ApcEpi.Devices
             if (_outlets.TryGetValue(outletIndex, out outlet))
             {
                 outlet.PowerOn();
+                ResetPoll();
+                return;
+            }
+
+            Debug.Console(1, this, "Outlet at index-{0} does not exist", outletIndex);
+        }
+
+        public void RebootOutlet(uint outletIndex)
+        {
+            IApOutlet outlet;
+            if (_outlets.TryGetValue(outletIndex, out outlet))
+            {
+                outlet.CyclePower();
                 ResetPoll();
                 return;
             }

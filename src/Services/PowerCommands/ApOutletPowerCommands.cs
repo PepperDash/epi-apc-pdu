@@ -4,12 +4,13 @@ namespace ApcEpi.Services.PowerCommands
 {
     public class ApOutletPowerCommands
     {
-        public const string PowerOnCommand = "olOn";
-        public const string PowerOffCommand = "olOff";
+        public const string PowerOnCommandString = "olOn";
+        public const string PowerOffCommandString = "olOff";
+        public const string RebootCommandString = "olOff";
 
         public static string GetPowerOnCommand(int outletIndex)
         {
-            var builder = new StringBuilder(PowerOnCommand);
+            var builder = new StringBuilder(PowerOnCommandString);
             builder.Append(" ");
             builder.Append(outletIndex);
             builder.Append("\r");
@@ -19,7 +20,17 @@ namespace ApcEpi.Services.PowerCommands
 
         public static string GetPowerOffCommand(int outletIndex)
         {
-            var builder = new StringBuilder(PowerOffCommand);
+            var builder = new StringBuilder(PowerOffCommandString);
+            builder.Append(" ");
+            builder.Append(outletIndex);
+            builder.Append("\r");
+
+            return builder.ToString();
+        }
+
+        public static string GetRebootCommand(int outletIndex)
+        {
+            var builder = new StringBuilder(RebootCommandString);
             builder.Append(" ");
             builder.Append(outletIndex);
             builder.Append("\r");
