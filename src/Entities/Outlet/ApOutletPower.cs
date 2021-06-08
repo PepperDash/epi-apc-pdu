@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Linq;
 using ApcEpi.Services.PowerCommands;
-using Crestron.SimplSharp;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
+using PepperDash.Essentials.Core.Queues;
 
 namespace ApcEpi.Entities.Outlet
 {
     public class ApOutletPower : IPower, IKeyName
     {
+        private readonly GenericQueue _queue;
         private readonly IBasicCommunication _coms;
 
         private readonly string _matchString;
@@ -16,24 +17,25 @@ namespace ApcEpi.Entities.Outlet
         private readonly string _powerOnCommand;
         private bool _powerIsOn;
 
-        public ApOutletPower(string key, string name, int outletIndex, IBasicCommunication coms)
+        public ApOutletPower(string key, string name, int outletIndex, CommunicationGather gather, GenericQueue queue)
         {
+            _queue = queue;
             Key = key;
             Name = name;
-            _coms = coms;
+            _coms = gather.Port as IBasicCommunication;
             _matchString = ApOutlet.GetMatchString(outletIndex);
 
             PowerIsOnFeedback = new BoolFeedback(
                 key + "-Power",
                 () => _powerIsOn);
 
-            InitializeGather(coms);
+            gather.LineReceived += GatherOnLineReceived;
 
             _powerOnCommand = ApOutletPowerCommands.GetPowerOnCommand(outletIndex);
             _powerOffCommand = ApOutletPowerCommands.GetPowerOffCommand(outletIndex);
         }
 
-        public enum PowerResponseEnum
+        private enum PowerResponseEnum
         {
             On,
             Off,
@@ -50,7 +52,7 @@ namespace ApcEpi.Entities.Outlet
             if (!_powerIsOn)
                 return;
 
-            _coms.SendText(_powerOffCommand);
+            _queue.Enqueue(new ComsMessage(_coms, _powerOffCommand));
         }
 
         public void PowerOn()
@@ -58,7 +60,7 @@ namespace ApcEpi.Entities.Outlet
             if (_powerIsOn)
                 return;
 
-            _coms.SendText(_powerOnCommand);
+            _queue.Enqueue(new ComsMessage(_coms, _powerOnCommand));
         }
 
         public void PowerToggle()
@@ -77,7 +79,7 @@ namespace ApcEpi.Entities.Outlet
             return splitResponse.ElementAtOrDefault(2) ?? String.Empty;
         }
 
-        private static PowerResponseEnum GetOutletStatusFromResponse(string response)
+        private PowerResponseEnum GetOutletStatusFromResponse(string response)
         {
             var data = GetDataPayloadFromResponse(response);
             if (String.IsNullOrEmpty(data))
@@ -89,6 +91,7 @@ namespace ApcEpi.Entities.Outlet
             }
             catch (Exception ex)
             {
+                Debug.Console(1, this, "Could not process response : {0} {1}", response, ex.Message);
                 return PowerResponseEnum.Unknown;
             }
         }
@@ -110,34 +113,9 @@ namespace ApcEpi.Entities.Outlet
                     break;
                 case PowerResponseEnum.Unknown:
                     break;
-                default:
-                    throw new ArgumentOutOfRangeException();
             }
 
             PowerIsOnFeedback.FireUpdate();
-        }
-
-        private void InitializeGather(ICommunicationReceiver coms)
-        {
-            var gather = new CommunicationGather(coms, "\n");
-            gather.LineReceived += GatherOnLineReceived;
-
-            CrestronEnvironment.ProgramStatusEventHandler += type =>
-                {
-                    switch (type)
-                    {
-                        case eProgramStatusEventType.Stopping:
-                            gather.LineReceived -= GatherOnLineReceived;
-                            gather.Stop();
-                            break;
-                        case eProgramStatusEventType.Paused:
-                            break;
-                        case eProgramStatusEventType.Resumed:
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException("type");
-                    }
-                };
         }
     }
 }

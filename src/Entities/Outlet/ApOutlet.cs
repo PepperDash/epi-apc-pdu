@@ -3,6 +3,7 @@ using ApcEpi.Abstractions;
 using ApcEpi.Services.NameCommands;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
+using PepperDash.Essentials.Core.Queues;
 
 namespace ApcEpi.Entities.Outlet
 {
@@ -11,7 +12,7 @@ namespace ApcEpi.Entities.Outlet
         private readonly IOnline _online;
         private readonly IPower _power;
 
-        public ApOutlet(string key, string name, int outletIndex, IBasicCommunication coms)
+        public ApOutlet(string key, string name, int outletIndex, GenericQueue txQueue, CommunicationGather gather)
         {
             Key = key;
             Name = name;
@@ -20,10 +21,10 @@ namespace ApcEpi.Entities.Outlet
                 Key + "-OutletName", 
                 () => String.IsNullOrEmpty(Name) ? Key : Name);
 
-            _online = new ApOutletOnline(key, name, outletIndex, coms);
-            _power = new ApOutletPower(key, name, outletIndex, coms);
+            _online = new ApOutletOnline(key, name, outletIndex, gather);
+            _power = new ApOutletPower(key, name, outletIndex, gather, txQueue);
 
-            var socket = coms as ISocketStatus;
+            var socket = gather.Port as ISocketStatus;
             if (socket != null)
             {
                 socket.ConnectionChange += (sender, args) =>
@@ -34,7 +35,7 @@ namespace ApcEpi.Entities.Outlet
                         var outletNameCommand = ApOutletNameCommands
                             .GetOutletNameCommand(outletIndex, key);
 
-                        coms.SendText(outletNameCommand);
+                        txQueue.Enqueue(new ComsMessage(gather.Port as IBasicCommunication, outletNameCommand));
                     };
             }
         }

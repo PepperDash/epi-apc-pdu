@@ -3,11 +3,13 @@ using ApcEpi.Abstractions;
 using ApcEpi.Config;
 using ApcEpi.Devices;
 using ApcEpi.Entities.Outlet;
+using ApcEpi.Services.StatusCommands;
 using Crestron.SimplSharp;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Config;
 using PepperDash.Essentials.Core.Devices;
+using PepperDash.Essentials.Core.Queues;
 
 namespace ApcEpi.Builders
 {
@@ -18,14 +20,19 @@ namespace ApcEpi.Builders
             Coms = coms;
             Name = name;
             Key = key;
-            Outlets = BuildOutletsFromConfig(key, config, coms);
+
+            var gather = new CommunicationGather(coms, "\n");
+            var queue = new GenericQueue(key + "-txQueue", 500);
+
+            Outlets = BuildOutletsFromConfig(key, config, gather, queue);
             Monitor = new GenericCommunicationMonitoredDevice(
                 Key,
                 Name,
                 Coms,
                 "about\r");
 
-            Poll = new CTimer(_ => ApDevice.PollDevice(coms), null, Timeout.Infinite);
+            var pollCommand = ApOutletStatusCommands.GetAllOutletStatusCommand();
+            Poll = new CTimer(_ => queue.Enqueue(new ComsMessage(coms, pollCommand)), Timeout.Infinite);
         }
 
         public string Key { get; private set; }
@@ -35,14 +42,15 @@ namespace ApcEpi.Builders
         public ReadOnlyDictionary<uint, IApOutlet> Outlets { get; private set; }
         public CTimer Poll { get; private set; }
 
-        public static ReadOnlyDictionary<uint, IApOutlet> BuildOutletsFromConfig(
+        private static ReadOnlyDictionary<uint, IApOutlet> BuildOutletsFromConfig(
             string parentKey,
             ApDeviceConfig config,
-            IBasicCommunication coms)
+            CommunicationGather gather,
+            GenericQueue queue)
         {
             var outlets = config
                 .Outlets
-                .Select(x => new ApOutlet(parentKey + "-" + x.Key, x.Value.Name, x.Value.OutletIndex, coms))
+                .Select(x => new ApOutlet(parentKey + "-" + x.Key, x.Value.Name, x.Value.OutletIndex, queue, gather))
                 .ToDictionary<ApOutlet, uint, IApOutlet>(outlet => (uint) outlet.OutletIndex, outlet => outlet);
 
             return new ReadOnlyDictionary<uint, IApOutlet>(outlets);
@@ -58,7 +66,6 @@ namespace ApcEpi.Builders
 
         public EssentialsDevice Build()
         {
-            Debug.Console(1, this, "Building...");
             return new ApDevice(this);
         }
     }

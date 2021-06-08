@@ -268,15 +268,6 @@ namespace ApcEpi.Devices
             Debug.Console(1, this, "Outlet at index-{0} does not exist", outletIndex);
         }
 
-        public static void PollDevice(IBasicCommunication coms)
-        {
-            if (coms == null)
-                return;
-
-            var command = ApOutletStatusCommands.GetAllOutletStatusCommand();
-            coms.SendText(command);
-        }
-
         private void ResetPoll()
         {
             _poll.Reset(1000, 10000);
