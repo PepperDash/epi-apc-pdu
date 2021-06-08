@@ -18,8 +18,8 @@ namespace ApcEpi.Entities.Outlet
             Name = name;
             OutletIndex = outletIndex;
             NameFeedback = new StringFeedback(
-                Key + "-OutletName", 
-                () => String.IsNullOrEmpty(Name) ? Key : Name);
+                Key + "-OutletName",
+                () => string.IsNullOrEmpty(Name) ? string.Empty : Name);
 
             _online = new ApOutletOnline(key, name, outletIndex, gather);
             _power = new ApOutletPower(key, name, outletIndex, gather, txQueue);
