@@ -37,7 +37,6 @@ namespace ApcEpi.Builders
                 Name,
                 Coms,
                 "about\r", 10000, 30000, 60000);
-            Poll = new CTimer(_ => ApDevice.PollDevice(coms), null, Timeout.Infinite);
 
             var pollCommand = ApOutletStatusCommands.GetAllOutletStatusCommand();
             Poll = new CTimer(_ => _pollQueue.Enqueue(new ComsMessage(coms, pollCommand)), Timeout.Infinite);
@@ -73,7 +72,6 @@ namespace ApcEpi.Builders
 
         public EssentialsDevice Build()
         {
-            Debug.Console(1, this, "Building...");
             return new ApDevice(this);
         }
     }

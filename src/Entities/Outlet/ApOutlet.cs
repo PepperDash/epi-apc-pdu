@@ -18,7 +18,7 @@ namespace ApcEpi.Entities.Outlet
             OutletIndex = outletIndex;
             NameFeedback = new StringFeedback(
                 parentDeviceKey + "-" + Key + "-OutletName", 
-                () => String.IsNullOrEmpty(Name) ? Key : Name);
+                () => String.IsNullOrEmpty(Name) ? string.Empty : Name);
 
             _online = new ApOutletOnline(key, name, outletIndex);
             _power = new ApOutletPower(key, name, outletIndex, coms);

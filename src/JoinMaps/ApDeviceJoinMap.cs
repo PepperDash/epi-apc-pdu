@@ -103,6 +103,9 @@ namespace ApcEpi.JoinMaps
             });
 
         public ApDeviceJoinMap(uint joinStart)
-            : base(joinStart, typeof(ApDeviceJoinMap)){}
+            : base(joinStart, typeof(ApDeviceJoinMap))
+        {
+
+        }
     }
 }
