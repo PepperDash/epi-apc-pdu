@@ -11,7 +11,7 @@ using Feedback = PepperDash.Essentials.Core.Feedback;
 
 namespace ApcEpi.Devices
 {
-    public class ApDevice: EssentialsDevice, IOutletName, IOutletPower, IOutletOnline, IBridgeAdvanced
+    public class ApDevice: EssentialsBridgeableDevice, IOutletName, IOutletPower, IOutletOnline
     {
         private readonly ICommunicationMonitor _monitor;
         private readonly CTimer _poll;
@@ -99,7 +99,7 @@ namespace ApcEpi.Devices
             return true;
         }
 
-        public void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
+        public override void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
         {
             var joinMap = new ApDeviceJoinMap(joinStart);
 
