@@ -20,5 +20,6 @@ namespace ApcEpi.Config
         public int OutletIndex { get; set; }
         public int DelayOn { get; set; }
         public int DelayOff { get; set; }
+        public bool IsInvisible { get; set; }
     }
 }

@@ -4,6 +4,7 @@ namespace ApcEpi.JoinMaps
 {
     public class ApDeviceJoinMap : JoinMapBaseAdvanced
     {
+        [JoinName("DeviceName")] 
         public JoinDataComplete DeviceName = new JoinDataComplete(
             new JoinData
                 {
@@ -17,6 +18,7 @@ namespace ApcEpi.JoinMaps
                     JoinType = eJoinType.Serial
                 });
 
+        [JoinName("DeviceOnline")] 
         public JoinDataComplete DeviceOnline = new JoinDataComplete(
             new JoinData
             {
@@ -30,6 +32,7 @@ namespace ApcEpi.JoinMaps
                 JoinType = eJoinType.Digital
             });
 
+        [JoinName("OutletName")] 
         public JoinDataComplete OutletName = new JoinDataComplete(
             new JoinData
             {
@@ -38,11 +41,12 @@ namespace ApcEpi.JoinMaps
             },
             new JoinMetadata
             {
-                Description = "Device Name",
+                Description = "Outlet Name",
                 JoinCapabilities = eJoinCapabilities.ToSIMPL,
                 JoinType = eJoinType.Serial
             });
 
+        [JoinName("OutletOnline")] 
         public JoinDataComplete OutletOnline = new JoinDataComplete(
             new JoinData
             {
@@ -56,6 +60,7 @@ namespace ApcEpi.JoinMaps
                 JoinType = eJoinType.Digital
             });
 
+        [JoinName("OutletPowerOn")] 
         public JoinDataComplete OutletPowerOn = new JoinDataComplete(
             new JoinData
             {
@@ -69,6 +74,7 @@ namespace ApcEpi.JoinMaps
                 JoinType = eJoinType.Digital
             });
 
+        [JoinName("OutletPowerOff")] 
         public JoinDataComplete OutletPowerOff = new JoinDataComplete(
             new JoinData
             {
@@ -82,6 +88,7 @@ namespace ApcEpi.JoinMaps
                 JoinType = eJoinType.Digital
             });
 
+        [JoinName("OutletPowerToggle")] 
         public JoinDataComplete OutletPowerToggle = new JoinDataComplete(
             new JoinData
             {
@@ -96,6 +103,6 @@ namespace ApcEpi.JoinMaps
             });
 
         public ApDeviceJoinMap(uint joinStart)
-            : base(joinStart, typeof(ApDeviceJoinMap)) { }
+            : base(joinStart, typeof(ApDeviceJoinMap)){}
     }
 }

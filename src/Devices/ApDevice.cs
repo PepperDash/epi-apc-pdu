@@ -2,7 +2,6 @@
 using System.Linq;
 using ApcEpi.Abstractions;
 using ApcEpi.JoinMaps;
-using ApcEpi.Services.StatusCommands;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro.DeviceSupport;
 using PepperDash.Core;
@@ -14,7 +13,7 @@ using Feedback = PepperDash.Essentials.Core.Feedback;
 
 namespace ApcEpi.Devices
 {
-    public class ApDevice: EssentialsDevice, IOutletName, IOutletPower, IOutletOnline, IBridgeAdvanced
+    public class ApDevice: EssentialsBridgeableDevice, IOutletName, IOutletPower, IOutletOnline
     {
         private readonly CTimer _poll;
         private readonly ICommunicationMonitor _monitor;
@@ -116,7 +115,7 @@ namespace ApcEpi.Devices
             return true;
         }
 
-        public void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
+        public override void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
         {
             var joinMap = new ApDeviceJoinMap(joinStart);
 
@@ -282,15 +281,6 @@ namespace ApcEpi.Devices
             }
 
             Debug.Console(1, this, "Outlet at index-{0} does not exist", outletIndex);
-        }
-
-        public static void PollDevice(IBasicCommunication coms)
-        {
-            if (coms == null)
-                return;
-
-            var command = ApOutletStatusCommands.GetAllOutletStatusCommand();
-            coms.SendText(command);
         }
 
         private void ResetPoll()
