@@ -6,26 +6,41 @@ using ApcEpi.Entities.Outlet;
 using Crestron.SimplSharp;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
+using PepperDash.Essentials.Core.Queues;
 using PepperDash.Essentials.Core.Config;
 using PepperDash.Essentials.Core.Devices;
+using ApcEpi.Services.StatusCommands;
 
 namespace ApcEpi.Builders
 {
     public class Ap89XxBuilder : IApDeviceBuilder
     {
+        private static GenericQueue _pollQueue;
+        private static GenericQueue _txQueue;
+
         private Ap89XxBuilder(string key, string name, IBasicCommunication coms, ApDeviceConfig config)
         {
             Coms = coms;
             Name = name;
             Key = key;
             Outlets = BuildOutletsFromConfig(key, config, coms);
+
+            if (_pollQueue == null)
+                _pollQueue = new GenericQueue("ApcPollQueue", 20);
+            
+            if (_txQueue == null)
+                _txQueue = new GenericQueue("ApcTxQueue", 500);
+
+            Outlets = BuildOutletsFromConfig(key, config, coms);
             Monitor = new GenericCommunicationMonitoredDevice(
                 Key,
                 Name,
                 Coms,
-                "about\r");
-
+                "about\r", 10000, 30000, 60000);
             Poll = new CTimer(_ => ApDevice.PollDevice(coms), null, Timeout.Infinite);
+
+            var pollCommand = ApOutletStatusCommands.GetAllOutletStatusCommand();
+            Poll = new CTimer(_ => _pollQueue.Enqueue(new ComsMessage(coms, pollCommand)), Timeout.Infinite);
         }
 
         public string Key { get; private set; }

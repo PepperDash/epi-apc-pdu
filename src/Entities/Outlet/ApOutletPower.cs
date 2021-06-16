@@ -27,8 +27,6 @@ namespace ApcEpi.Entities.Outlet
                 key + "-Power",
                 () => _powerIsOn);
 
-            InitializeGather(coms);
-
             _powerOnCommand = ApOutletPowerCommands.GetPowerOnCommand(outletIndex);
             _powerOffCommand = ApOutletPowerCommands.GetPowerOffCommand(outletIndex);
         }
@@ -93,12 +91,12 @@ namespace ApcEpi.Entities.Outlet
             }
         }
 
-        private void GatherOnLineReceived(object sender, GenericCommMethodReceiveTextArgs args)
+        public void ProcessResponse(string response)
         {
-            if (!args.Text.StartsWith(_matchString))
+            if (!response.StartsWith(_matchString))
                 return;
-   
-            var status = GetOutletStatusFromResponse(args.Text);
+
+            var status = GetOutletStatusFromResponse(response);
 
             switch (status)
             {
@@ -115,29 +113,6 @@ namespace ApcEpi.Entities.Outlet
             }
 
             PowerIsOnFeedback.FireUpdate();
-        }
-
-        private void InitializeGather(ICommunicationReceiver coms)
-        {
-            var gather = new CommunicationGather(coms, "\n");
-            gather.LineReceived += GatherOnLineReceived;
-
-            CrestronEnvironment.ProgramStatusEventHandler += type =>
-                {
-                    switch (type)
-                    {
-                        case eProgramStatusEventType.Stopping:
-                            gather.LineReceived -= GatherOnLineReceived;
-                            gather.Stop();
-                            break;
-                        case eProgramStatusEventType.Paused:
-                            break;
-                        case eProgramStatusEventType.Resumed:
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException("type");
-                    }
-                };
         }
     }
 }

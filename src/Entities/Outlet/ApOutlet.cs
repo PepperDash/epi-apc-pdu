@@ -8,8 +8,8 @@ namespace ApcEpi.Entities.Outlet
 {
     public class ApOutlet : IApOutlet
     {
-        private readonly IOnline _online;
-        private readonly IPower _power;
+        private readonly ApOutletOnline _online;
+        private readonly ApOutletPower _power;
 
         public ApOutlet(string key, string name, int outletIndex, string parentDeviceKey, IBasicCommunication coms)
         {
@@ -20,23 +20,8 @@ namespace ApcEpi.Entities.Outlet
                 parentDeviceKey + "-" + Key + "-OutletName", 
                 () => String.IsNullOrEmpty(Name) ? Key : Name);
 
-            _online = new ApOutletOnline(key, name, outletIndex, coms);
+            _online = new ApOutletOnline(key, name, outletIndex);
             _power = new ApOutletPower(key, name, outletIndex, coms);
-
-            var socket = coms as ISocketStatus;
-            if (socket != null)
-            {
-                socket.ConnectionChange += (sender, args) =>
-                    {
-                        if (!args.Client.IsConnected)
-                            return;
-
-                        var outletNameCommand = ApOutletNameCommands
-                            .GetOutletNameCommand(outletIndex, key);
-
-                        coms.SendText(outletNameCommand);
-                    };
-            }
         }
 
         public BoolFeedback IsOnline
@@ -72,6 +57,12 @@ namespace ApcEpi.Entities.Outlet
         public void PowerToggle()
         {
             _power.PowerToggle();
+        }
+
+        public void ProcessResponse(string response)
+        {
+            _online.ProcessResponse(response);
+            _power.ProcessResponse(response);
         }
     }
 }

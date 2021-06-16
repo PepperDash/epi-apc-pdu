@@ -7,24 +7,30 @@ using Crestron.SimplSharp;
 using Crestron.SimplSharpPro.DeviceSupport;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
+using PepperDash.Essentials.Core.Queues;
 using PepperDash.Essentials.Core.Bridges;
+using ApcEpi.Messages;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 
 namespace ApcEpi.Devices
 {
     public class ApDevice: EssentialsDevice, IOutletName, IOutletPower, IOutletOnline, IBridgeAdvanced
     {
-        private readonly ICommunicationMonitor _monitor;
         private readonly CTimer _poll;
+        private readonly ICommunicationMonitor _monitor;
         private readonly ReadOnlyDictionary<uint, IApOutlet> _outlets;
+        private static IQueue<IQueueMessage> _connectionQueue;
 
         public ApDevice(IApDeviceBuilder builder)
             : base(builder.Key, builder.Name)
         {
             Feedbacks = new FeedbackCollection<Feedback>();
+            if (_connectionQueue == null)
+                _connectionQueue = new GenericQueue("ConnectionQueue", Crestron.SimplSharpPro.CrestronThread.Thread.eThreadPriority.LowestPriority, 50);
 
             _outlets = builder.Outlets;
             _monitor = builder.Monitor;
+
             _poll = builder.Poll;
 
             var socket = builder.Coms as ISocketStatus;
@@ -42,7 +48,14 @@ namespace ApcEpi.Devices
                         };
             }
 
-            AddPostActivationAction(() => builder.Coms.Connect());
+            var gather = new CommunicationGather(builder.Coms, "\n");
+            new StringResponseProcessor(gather, response => 
+            {
+                foreach(var outlet in _outlets)
+                    outlet.Value.ProcessResponse(response);
+            });
+
+            AddPostActivationAction(() => _connectionQueue.Enqueue(new ConnectionQueueMessage(builder.Coms)));
 
             NameFeedback = new StringFeedback("DeviceNameFeedback", () => builder.Name);
             Feedbacks.Add(IsOnline);
@@ -75,6 +88,9 @@ namespace ApcEpi.Devices
             {
                 Feedbacks.AddRange(apOutletFeedbacks);
             }
+
+            Feedbacks.Add(_monitor.CommunicationMonitor.IsOnlineFeedback);
+            CommunicationMonitor.Start();
 
             foreach (var feedback in Feedbacks)
             {

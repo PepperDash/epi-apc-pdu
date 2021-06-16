@@ -73,7 +73,7 @@ namespace ApcEpi.JoinMaps
             new JoinData
             {
                 JoinNumber = 150,
-                JoinSpan = 150
+                JoinSpan = 50
             },
             new JoinMetadata
             {
@@ -96,6 +96,6 @@ namespace ApcEpi.JoinMaps
             });
 
         public ApDeviceJoinMap(uint joinStart)
-            : base(joinStart) { }
+            : base(joinStart, typeof(ApDeviceJoinMap)) { }
     }
 }
