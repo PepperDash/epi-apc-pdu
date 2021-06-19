@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using ApcEpi.Services.PowerCommands;
-using Crestron.SimplSharp;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 
@@ -29,13 +28,6 @@ namespace ApcEpi.Entities.Outlet
 
             _powerOnCommand = ApOutletPowerCommands.GetPowerOnCommand(outletIndex);
             _powerOffCommand = ApOutletPowerCommands.GetPowerOffCommand(outletIndex);
-        }
-
-        public enum PowerResponseEnum
-        {
-            On,
-            Off,
-            Unknown
         }
 
         public string Key { get; private set; }
@@ -75,44 +67,14 @@ namespace ApcEpi.Entities.Outlet
             return splitResponse.ElementAtOrDefault(2) ?? String.Empty;
         }
 
-        private static PowerResponseEnum GetOutletStatusFromResponse(string response)
+        public bool PowerStatus
         {
-            var data = GetDataPayloadFromResponse(response);
-            if (String.IsNullOrEmpty(data))
-                return PowerResponseEnum.Unknown;
-
-            try
+            get { return _powerIsOn; }
+            set
             {
-                return (PowerResponseEnum) Enum.Parse(typeof (PowerResponseEnum), data, true);
+                _powerIsOn = value;
+                PowerIsOnFeedback.FireUpdate();
             }
-            catch (Exception ex)
-            {
-                return PowerResponseEnum.Unknown;
-            }
-        }
-
-        public void ProcessResponse(string response)
-        {
-            if (!response.StartsWith(_matchString))
-                return;
-
-            var status = GetOutletStatusFromResponse(response);
-
-            switch (status)
-            {
-                case PowerResponseEnum.On:
-                    _powerIsOn = true;
-                    break;
-                case PowerResponseEnum.Off:
-                    _powerIsOn = false;
-                    break;
-                case PowerResponseEnum.Unknown:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-
-            PowerIsOnFeedback.FireUpdate();
         }
     }
 }

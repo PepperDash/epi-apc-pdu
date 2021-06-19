@@ -38,11 +38,8 @@ namespace ApcEpi.Entities.Outlet
         public string Key { get; private set; }
         public string Name { get; private set; }
 
-        public void ProcessResponse(string response)
+        public void SetIsOnline()
         {
-            if (!response.StartsWith(_matchString))
-                return;
-
             _isOnline = true;
             IsOnline.FireUpdate();
             _offlineTimer.Reset(60000, 60000);

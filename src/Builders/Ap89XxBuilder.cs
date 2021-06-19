@@ -4,6 +4,7 @@ using ApcEpi.Config;
 using ApcEpi.Devices;
 using ApcEpi.Entities.Outlet;
 using Crestron.SimplSharp;
+using Crestron.SimplSharpPro.Diagnostics;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Queues;
@@ -36,10 +37,33 @@ namespace ApcEpi.Builders
                 Key,
                 Name,
                 Coms,
-                "about\r", 10000, 30000, 60000);
+                "about\r", 60000, 120000, 240000);
 
             var pollCommand = ApOutletStatusCommands.GetAllOutletStatusCommand();
-            Poll = new CTimer(_ => _pollQueue.Enqueue(new ComsMessage(coms, pollCommand)), Timeout.Infinite);
+
+            Poll = new CTimer(_ =>
+                {
+                    if (!SystemMonitor.ProgramInitialization.ProgramInitializationComplete)
+                        return;
+
+                    _pollQueue.Enqueue(new ComsMessage(coms, pollCommand));
+                }, Timeout.Infinite);
+
+            var socket = coms as ISocketStatus;
+            if (socket != null)
+            {
+                socket.ConnectionChange +=
+                    (sender, args) =>
+                    {
+                        if (args.Client.IsConnected)
+                            Poll.Reset(2000, 30000);
+                        else
+                        {
+                            Poll.Stop();
+                        }
+                    };
+            }
+
         }
 
         public string Key { get; private set; }

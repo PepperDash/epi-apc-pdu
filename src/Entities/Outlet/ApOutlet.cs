@@ -6,6 +6,7 @@ using PepperDash.Essentials.Core;
 
 namespace ApcEpi.Entities.Outlet
 {
+
     public class ApOutlet : IApOutlet
     {
         private readonly ApOutletOnline _online;
@@ -22,6 +23,21 @@ namespace ApcEpi.Entities.Outlet
 
             _online = new ApOutletOnline(key, name, outletIndex);
             _power = new ApOutletPower(key, name, outletIndex, coms);
+
+            var socket = coms as ISocketStatus;
+            if (socket != null)
+            {
+                socket.ConnectionChange += (sender, args) =>
+                {
+                    if (!args.Client.IsConnected)
+                        return;
+
+                    var outletNameCommand = ApOutletNameCommands
+                        .GetOutletNameCommand(outletIndex, key);
+
+                    //coms.SendText(outletNameCommand);
+                };
+            }
         }
 
         public BoolFeedback IsOnline
@@ -32,6 +48,7 @@ namespace ApcEpi.Entities.Outlet
         public string Key { get; private set; }
         public string Name { get; private set; }
         public StringFeedback NameFeedback { get; private set; }
+
         public int OutletIndex { get; private set; }
 
         public BoolFeedback PowerIsOnFeedback
@@ -59,10 +76,18 @@ namespace ApcEpi.Entities.Outlet
             _power.PowerToggle();
         }
 
-        public void ProcessResponse(string response)
+        public bool PowerStatus
         {
-            _online.ProcessResponse(response);
-            _power.ProcessResponse(response);
+            get { return _power.PowerStatus; }
+            set
+            {
+                _power.PowerStatus = value;
+            }
+        }
+
+        public void SetIsOnline()
+        {
+            _online.SetIsOnline();
         }
     }
 }

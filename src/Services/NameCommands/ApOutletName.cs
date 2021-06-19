@@ -17,15 +17,5 @@ namespace ApcEpi.Services.NameCommands
 
             return builder.ToString();
         }
-
-        public static string GetOutletPollCommand(int outletNumber)
-        {
-            var builder = new StringBuilder(Command);
-            builder.Append(" ");
-            builder.Append(outletNumber);
-            builder.Append("\r");
-
-            return builder.ToString();
-        }
     }
 }

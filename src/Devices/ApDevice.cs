@@ -4,11 +4,11 @@ using ApcEpi.Abstractions;
 using ApcEpi.JoinMaps;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro.DeviceSupport;
+using Crestron.SimplSharpPro.Diagnostics;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Queues;
 using PepperDash.Essentials.Core.Bridges;
-using ApcEpi.Messages;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 
 namespace ApcEpi.Devices
@@ -18,43 +18,59 @@ namespace ApcEpi.Devices
         private readonly CTimer _poll;
         private readonly ICommunicationMonitor _monitor;
         private readonly ReadOnlyDictionary<uint, IApOutlet> _outlets;
-        private static IQueue<IQueueMessage> _connectionQueue;
 
         public ApDevice(IApDeviceBuilder builder)
             : base(builder.Key, builder.Name)
         {
             Feedbacks = new FeedbackCollection<Feedback>();
-            if (_connectionQueue == null)
-                _connectionQueue = new GenericQueue("ConnectionQueue", Crestron.SimplSharpPro.CrestronThread.Thread.eThreadPriority.LowestPriority, 50);
 
             _outlets = builder.Outlets;
             _monitor = builder.Monitor;
-
             _poll = builder.Poll;
+
+            var gather = new CommunicationGather(builder.Coms, "\n");
+            new StringResponseProcessor(gather,
+                response =>
+                    {
+                        if (!SystemMonitor.ProgramInitialization.ProgramInitializationComplete)
+                            return;
+
+                        Debug.Console(2, this, "Processing response : {0}", response);
+                        var responseToProcess = response.Trim().Split(new[] {':'});
+                        if (responseToProcess.Count() != 3)
+                            return;
+
+                        try
+                        {
+                            var outletIndex = Convert.ToUInt32(responseToProcess[0]);
+                            IApOutlet outlet;
+                            if (!_outlets.TryGetValue(outletIndex, out outlet))
+                                return;
+
+                            if (responseToProcess[2].Contains("On"))
+                            {
+                                outlet.PowerStatus = true;
+                            }
+                            else if (responseToProcess[2].Contains("Off"))
+                            {
+                                outlet.PowerStatus = false;
+                            }
+                            else
+                            {
+                                Debug.Console(1, this, "Not sure where to go with this response : {0}", response);
+                            }
+
+                            outlet.SetIsOnline();
+                        }
+                        catch (Exception) 
+                        {
+                            
+                        }
+                    });
 
             var socket = builder.Coms as ISocketStatus;
             if (socket != null)
-            {
-                socket.ConnectionChange +=
-                    (sender, args) =>
-                        {
-                            if (args.Client.IsConnected)
-                                _poll.Reset(2000, 30000);
-                            else
-                            {
-                                _poll.Stop();
-                            }
-                        };
-            }
-
-            var gather = new CommunicationGather(builder.Coms, "\n");
-            new StringResponseProcessor(gather, response => 
-            {
-                foreach(var outlet in _outlets)
-                    outlet.Value.ProcessResponse(response);
-            });
-
-            AddPostActivationAction(() => _connectionQueue.Enqueue(new ConnectionQueueMessage(builder.Coms)));
+                AddPostActivationAction(socket.Connect);
 
             NameFeedback = new StringFeedback("DeviceNameFeedback", () => builder.Name);
             Feedbacks.Add(IsOnline);
@@ -89,8 +105,6 @@ namespace ApcEpi.Devices
             }
 
             Feedbacks.Add(_monitor.CommunicationMonitor.IsOnlineFeedback);
-            CommunicationMonitor.Start();
-
             foreach (var feedback in Feedbacks)
             {
                 feedback.OutputChange += (sender, args) =>
@@ -110,8 +124,8 @@ namespace ApcEpi.Devices
                     };
             }
 
+            
             CommunicationMonitor.Start();
-
             return true;
         }
 
