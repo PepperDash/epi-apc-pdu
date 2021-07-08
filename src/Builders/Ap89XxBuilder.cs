@@ -4,12 +4,12 @@ using ApcEpi.Config;
 using ApcEpi.Devices;
 using ApcEpi.Entities.Outlet;
 using Crestron.SimplSharp;
+using Crestron.SimplSharpPro.CrestronThread;
 using Crestron.SimplSharpPro.Diagnostics;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Queues;
 using PepperDash.Essentials.Core.Config;
-using PepperDash.Essentials.Core.Devices;
 using ApcEpi.Services.StatusCommands;
 
 namespace ApcEpi.Builders
@@ -17,7 +17,6 @@ namespace ApcEpi.Builders
     public class Ap89XxBuilder : IApDeviceBuilder
     {
         private static GenericQueue _pollQueue;
-        private static GenericQueue _txQueue;
 
         private Ap89XxBuilder(string key, string name, IBasicCommunication coms, ApDeviceConfig config)
         {
@@ -27,18 +26,11 @@ namespace ApcEpi.Builders
             Outlets = BuildOutletsFromConfig(key, config, coms);
 
             if (_pollQueue == null)
-                _pollQueue = new GenericQueue("ApcPollQueue", 20);
-            
-            if (_txQueue == null)
-                _txQueue = new GenericQueue("ApcTxQueue", 500);
+                _pollQueue = new GenericQueue("ApcPollQueue", Thread.eThreadPriority.LowestPriority, 200);
+
+            PollQueue = _pollQueue;
 
             Outlets = BuildOutletsFromConfig(key, config, coms);
-            Monitor = new GenericCommunicationMonitoredDevice(
-                Key,
-                Name,
-                Coms,
-                "about\r", 60000, 120000, 240000);
-
             var pollCommand = ApOutletStatusCommands.GetAllOutletStatusCommand();
 
             Poll = new CTimer(_ =>
@@ -68,8 +60,9 @@ namespace ApcEpi.Builders
 
         public string Key { get; private set; }
         public string Name { get; private set; }
+        public GenericQueue PollQueue { get; private set; }
         public IBasicCommunication Coms { get; private set; }
-        public ICommunicationMonitor Monitor { get; private set; }
+
         public ReadOnlyDictionary<uint, IApOutlet> Outlets { get; private set; }
         public CTimer Poll { get; private set; }
 

@@ -7,16 +7,17 @@ using Crestron.SimplSharpPro.DeviceSupport;
 using Crestron.SimplSharpPro.Diagnostics;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
-using PepperDash.Essentials.Core.Queues;
 using PepperDash.Essentials.Core.Bridges;
+using PepperDash.Essentials.Core.Queues;
 using Feedback = PepperDash.Essentials.Core.Feedback;
+using StringResponseProcessor = PepperDash.Essentials.Core.Queues.StringResponseProcessor;
 
 namespace ApcEpi.Devices
 {
     public class ApDevice: EssentialsBridgeableDevice, IOutletName, IOutletPower, IOutletOnline
     {
         private readonly CTimer _poll;
-        private readonly ICommunicationMonitor _monitor;
+        private readonly StatusMonitorBase _monitor;
         private readonly ReadOnlyDictionary<uint, IApOutlet> _outlets;
 
         public ApDevice(IApDeviceBuilder builder)
@@ -25,8 +26,13 @@ namespace ApcEpi.Devices
             Feedbacks = new FeedbackCollection<Feedback>();
 
             _outlets = builder.Outlets;
-            _monitor = builder.Monitor;
             _poll = builder.Poll;
+            _monitor = new GenericCommunicationMonitor(this, builder.Coms, 60000, 120000, 240000,
+                () =>
+                    {
+                        var message = new ComsMessage(builder.Coms, "about\r");
+                        builder.PollQueue.Enqueue(message);
+                    });
 
             var gather = new CommunicationGather(builder.Coms, "\n");
             new StringResponseProcessor(gather,
@@ -62,9 +68,9 @@ namespace ApcEpi.Devices
 
                             outlet.SetIsOnline();
                         }
-                        catch (Exception) 
+                        catch (Exception ex) 
                         {
-                            
+                            Debug.Console(1, this, "Error processing response : {0}", ex.Message);
                         }
                     });
 
@@ -79,7 +85,7 @@ namespace ApcEpi.Devices
 
         public StatusMonitorBase CommunicationMonitor
         {
-            get { return _monitor.CommunicationMonitor; }
+            get { return _monitor; }
         }
 
         public StringFeedback NameFeedback { get; private set; }
@@ -87,7 +93,7 @@ namespace ApcEpi.Devices
 
         public BoolFeedback IsOnline
         {
-            get { return _monitor.CommunicationMonitor.IsOnlineFeedback; }
+            get { return _monitor.IsOnlineFeedback; }
         }
 
         public override bool CustomActivate()
@@ -104,7 +110,7 @@ namespace ApcEpi.Devices
                 Feedbacks.AddRange(apOutletFeedbacks);
             }
 
-            Feedbacks.Add(_monitor.CommunicationMonitor.IsOnlineFeedback);
+            Feedbacks.Add(_monitor.IsOnlineFeedback);
             foreach (var feedback in Feedbacks)
             {
                 feedback.OutputChange += (sender, args) =>
