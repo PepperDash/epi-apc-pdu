@@ -4,13 +4,11 @@ using ApcEpi.Abstractions;
 using ApcEpi.JoinMaps;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro.DeviceSupport;
-using Crestron.SimplSharpPro.Diagnostics;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
 using PepperDash.Essentials.Core.Queues;
 using Feedback = PepperDash.Essentials.Core.Feedback;
-using StringResponseProcessor = PepperDash.Essentials.Core.Queues.StringResponseProcessor;
 
 namespace ApcEpi.Devices
 {
@@ -33,54 +31,107 @@ namespace ApcEpi.Devices
                         var message = new ComsMessage(builder.Coms, "about\r");
                         builder.PollQueue.Enqueue(message);
                     });
-
-            var gather = new CommunicationGather(builder.Coms, "\n");
-            new StringResponseProcessor(gather,
-                response =>
-                    {
-                        if (!SystemMonitor.ProgramInitialization.ProgramInitializationComplete)
-                            return;
-
-                        Debug.Console(2, this, "Processing response : {0}", response);
-                        var responseToProcess = response.Trim().Split(new[] {':'});
-                        if (responseToProcess.Count() != 3)
-                            return;
-
-                        try
-                        {
-                            var outletIndex = Convert.ToUInt32(responseToProcess[0]);
-                            IApOutlet outlet;
-                            if (!_outlets.TryGetValue(outletIndex, out outlet))
-                                return;
-
-                            if (responseToProcess[2].Contains("On"))
-                            {
-                                outlet.PowerStatus = true;
-                            }
-                            else if (responseToProcess[2].Contains("Off"))
-                            {
-                                outlet.PowerStatus = false;
-                            }
-                            else
-                            {
-                                Debug.Console(1, this, "Not sure where to go with this response : {0}", response);
-                            }
-
-                            outlet.SetIsOnline();
-                        }
-                        catch (Exception ex) 
-                        {
-                            Debug.Console(1, this, "Error processing response : {0}", ex.Message);
-                        }
-                    });
-
-            var socket = builder.Coms as ISocketStatus;
-            if (socket != null)
-                AddPostActivationAction(socket.Connect);
-
-            NameFeedback = new StringFeedback("DeviceNameFeedback", () => builder.Name);
+             
+            NameFeedback = new StringFeedback("DeviceNameFeedback", () => Name);
             Feedbacks.Add(IsOnline);
             Feedbacks.Add(NameFeedback);
+
+            DeviceManager.AllDevicesActivated += (sender, args) =>
+                {
+                    try
+                    {
+                        var gather = new CommunicationGather(builder.Coms, "\n");
+                        var queue = new GenericQueue(Key, 100);
+
+                        gather.LineReceived +=
+                            (o, textArgs) => queue.Enqueue(new ProcessApcStringMessage(_outlets, textArgs.Text));
+
+                        queue.Enqueue(new SocketConnectMessage(builder.Coms));
+                        CommunicationMonitor.Start();
+                    }
+
+                    catch (Exception ex)
+                    {
+                        Debug.Console(0,
+                            this,
+                            Debug.ErrorLogLevel.Error,
+                            "Error handling all devices activated : {0}",
+                            ex.Message);
+                    }
+                };
+        }
+
+        class ProcessApcStringMessage : IQueueMessage
+        {
+            private readonly ReadOnlyDictionary<uint, IApOutlet> _outlets;
+            private readonly string _response;
+
+            public ProcessApcStringMessage(ReadOnlyDictionary<uint, IApOutlet> outlets, string response)
+            {
+                _outlets = outlets;
+                _response = response;
+            }
+
+            public void Dispatch()
+            {
+                var responseToProcess = _response.Trim().Split(new[] { ':' });
+                if (responseToProcess.Count() != 3)
+                    return;
+
+                try
+                {
+                    var outletIndex = Convert.ToUInt32(responseToProcess[0]);
+                    IApOutlet outlet;
+                    if (!_outlets.TryGetValue(outletIndex, out outlet))
+                        return;
+
+                    if (responseToProcess[2].Contains("On"))
+                    {
+                        outlet.PowerStatus = true;
+                    }
+                    else if (responseToProcess[2].Contains("Off"))
+                    {
+                        outlet.PowerStatus = false;
+                    }
+                    else
+                    {
+                        Debug.Console(1,
+                            "Not sure where to go with this response : {0}",
+                            _response);
+                    }
+
+                    outlet.SetIsOnline();
+                }
+                catch (Exception ex)
+                {
+                    Debug.Console(1, "Error processing response : {0}", ex.Message);
+                }
+            }
+        }
+
+        class SocketConnectMessage : IQueueMessage
+        {
+            private readonly IBasicCommunication _coms;
+            public SocketConnectMessage(IBasicCommunication coms)
+            {
+                _coms = coms;
+            }
+
+            public void Dispatch()
+            {
+                try
+                {
+                    var socket = _coms as ISocketStatus;
+                    if (socket == null)
+                        return;
+
+                    socket.Connect();
+                }
+                catch (Exception ex)
+                {
+                    Debug.Console(1, "Error connecting socket : {0}", ex.Message);
+                }
+            }
         }
 
         public StatusMonitorBase CommunicationMonitor
@@ -129,9 +180,7 @@ namespace ApcEpi.Devices
                             Debug.Console(1, this, "Received update from {0} | {1}", fb.Key, fb.StringValue);
                     };
             }
-
             
-            CommunicationMonitor.Start();
             return true;
         }
 
