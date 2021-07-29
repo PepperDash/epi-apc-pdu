@@ -48,6 +48,16 @@ namespace ApcEpi.Devices
 
                         queue.Enqueue(new SocketConnectMessage(builder.Coms));
                         CommunicationMonitor.Start();
+
+                        var socket = builder.Coms as ISocketStatus;
+                        if (socket != null)
+                        {
+                            socket.ConnectionChange += (o, eventArgs) => Debug.Console(1, this,
+                                Debug.ErrorLogLevel.Notice,
+                                "Socket Status : {0}",
+                                eventArgs.Client.ClientStatus.ToString());
+                        }
+
                     }
 
                     catch (Exception ex)
