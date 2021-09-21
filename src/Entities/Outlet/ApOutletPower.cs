@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
 using ApcEpi.Services.PowerCommands;
+using ApcEpi.Services.StatusCommands;
+using Crestron.SimplSharp;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 
@@ -10,21 +12,23 @@ namespace ApcEpi.Entities.Outlet
     {
         private readonly IBasicCommunication _coms;
 
-        private readonly string _matchString;
         private readonly string _powerOffCommand;
         private readonly string _powerOnCommand;
         private bool _powerIsOn;
+        private readonly CTimer _poll;
 
         public ApOutletPower(string key, string name, int outletIndex, IBasicCommunication coms)
         {
             Key = key;
             Name = name;
             _coms = coms;
-            _matchString = ApOutlet.GetMatchString(outletIndex);
 
             PowerIsOnFeedback = new BoolFeedback(
                 key + "-Power",
                 () => _powerIsOn);
+
+            var pollCommand = ApOutletStatusCommands.GetOutletStatusCommand(outletIndex);
+            _poll = new CTimer(o => coms.SendText(pollCommand), Timeout.Infinite);
 
             _powerOnCommand = ApOutletPowerCommands.GetPowerOnCommand(outletIndex);
             _powerOffCommand = ApOutletPowerCommands.GetPowerOffCommand(outletIndex);
@@ -41,6 +45,7 @@ namespace ApcEpi.Entities.Outlet
                 return;
 
             _coms.SendText(_powerOffCommand);
+            _poll.Reset(1000);
         }
 
         public void PowerOn()
@@ -49,6 +54,7 @@ namespace ApcEpi.Entities.Outlet
                 return;
 
             _coms.SendText(_powerOnCommand);
+            _poll.Reset(1000);
         }
 
         public void PowerToggle()

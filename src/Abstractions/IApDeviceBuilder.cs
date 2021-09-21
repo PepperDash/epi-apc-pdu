@@ -11,11 +11,8 @@ namespace ApcEpi.Abstractions
 {
     public interface IApDeviceBuilder : IKeyName
     {
-        GenericQueue PollQueue { get; }
         IBasicCommunication Coms { get; }
         ReadOnlyDictionary<uint, IApOutlet> Outlets { get; } 
-        CTimer Poll { get; }
-
         EssentialsDevice Build();
     }
 }
