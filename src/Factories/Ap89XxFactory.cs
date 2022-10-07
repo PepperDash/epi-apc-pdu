@@ -9,7 +9,7 @@ namespace ApcEpi.Factories
     {
         public Ap89XxFactory()
         {
-            MinimumEssentialsFrameworkVersion = "1.6.4";
+            MinimumEssentialsFrameworkVersion = "1.8.0";
             TypeNames = new List<string>() { "Ap89xx" };
         }
 

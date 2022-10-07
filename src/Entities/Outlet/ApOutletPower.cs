@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using ApcEpi.Services.PowerCommands;
+using ApcEpi.Services.StatusCommands;
 using Crestron.SimplSharp;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
@@ -11,33 +12,26 @@ namespace ApcEpi.Entities.Outlet
     {
         private readonly IBasicCommunication _coms;
 
-        private readonly string _matchString;
         private readonly string _powerOffCommand;
         private readonly string _powerOnCommand;
         private bool _powerIsOn;
+        private readonly CTimer _poll;
 
         public ApOutletPower(string key, string name, int outletIndex, IBasicCommunication coms)
         {
             Key = key;
             Name = name;
             _coms = coms;
-            _matchString = ApOutlet.GetMatchString(outletIndex);
 
             PowerIsOnFeedback = new BoolFeedback(
                 key + "-Power",
                 () => _powerIsOn);
 
-            InitializeGather(coms);
+            var pollCommand = ApOutletStatusCommands.GetOutletStatusCommand(outletIndex);
+            _poll = new CTimer(o => coms.SendText(pollCommand), Timeout.Infinite);
 
             _powerOnCommand = ApOutletPowerCommands.GetPowerOnCommand(outletIndex);
             _powerOffCommand = ApOutletPowerCommands.GetPowerOffCommand(outletIndex);
-        }
-
-        public enum PowerResponseEnum
-        {
-            On,
-            Off,
-            Unknown
         }
 
         public string Key { get; private set; }
@@ -51,6 +45,7 @@ namespace ApcEpi.Entities.Outlet
                 return;
 
             _coms.SendText(_powerOffCommand);
+            _poll.Reset(1000);
         }
 
         public void PowerOn()
@@ -59,6 +54,7 @@ namespace ApcEpi.Entities.Outlet
                 return;
 
             _coms.SendText(_powerOnCommand);
+            _poll.Reset(1000);
         }
 
         public void PowerToggle()
@@ -77,67 +73,14 @@ namespace ApcEpi.Entities.Outlet
             return splitResponse.ElementAtOrDefault(2) ?? String.Empty;
         }
 
-        private static PowerResponseEnum GetOutletStatusFromResponse(string response)
+        public bool PowerStatus
         {
-            var data = GetDataPayloadFromResponse(response);
-            if (String.IsNullOrEmpty(data))
-                return PowerResponseEnum.Unknown;
-
-            try
+            get { return _powerIsOn; }
+            set
             {
-                return (PowerResponseEnum) Enum.Parse(typeof (PowerResponseEnum), data, true);
+                _powerIsOn = value;
+                PowerIsOnFeedback.FireUpdate();
             }
-            catch (Exception ex)
-            {
-                return PowerResponseEnum.Unknown;
-            }
-        }
-
-        private void GatherOnLineReceived(object sender, GenericCommMethodReceiveTextArgs args)
-        {
-            if (!args.Text.StartsWith(_matchString))
-                return;
-   
-            var status = GetOutletStatusFromResponse(args.Text);
-
-            switch (status)
-            {
-                case PowerResponseEnum.On:
-                    _powerIsOn = true;
-                    break;
-                case PowerResponseEnum.Off:
-                    _powerIsOn = false;
-                    break;
-                case PowerResponseEnum.Unknown:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-
-            PowerIsOnFeedback.FireUpdate();
-        }
-
-        private void InitializeGather(ICommunicationReceiver coms)
-        {
-            var gather = new CommunicationGather(coms, "\n");
-            gather.LineReceived += GatherOnLineReceived;
-
-            CrestronEnvironment.ProgramStatusEventHandler += type =>
-                {
-                    switch (type)
-                    {
-                        case eProgramStatusEventType.Stopping:
-                            gather.LineReceived -= GatherOnLineReceived;
-                            gather.Stop();
-                            break;
-                        case eProgramStatusEventType.Paused:
-                            break;
-                        case eProgramStatusEventType.Resumed:
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException("type");
-                    }
-                };
         }
     }
 }

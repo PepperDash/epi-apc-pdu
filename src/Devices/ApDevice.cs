@@ -5,6 +5,7 @@ using ApcEpi.JoinMaps;
 using ApcEpi.Services.StatusCommands;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro.DeviceSupport;
+using Crestron.SimplSharp.Ssh;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
@@ -12,10 +13,9 @@ using Feedback = PepperDash.Essentials.Core.Feedback;
 
 namespace ApcEpi.Devices
 {
-    public class ApDevice: EssentialsDevice, IOutletName, IOutletPower, IOutletOnline, IBridgeAdvanced
+    public class ApDevice: EssentialsBridgeableDevice, IOutletName, IOutletPower, IOutletOnline
     {
-        private readonly ICommunicationMonitor _monitor;
-        private readonly CTimer _poll;
+        private readonly StatusMonitorBase _monitor;
         private readonly ReadOnlyDictionary<uint, IApOutlet> _outlets;
 
         public ApDevice(IApDeviceBuilder builder)
@@ -24,34 +24,97 @@ namespace ApcEpi.Devices
             Feedbacks = new FeedbackCollection<Feedback>();
 
             _outlets = builder.Outlets;
-            _monitor = builder.Monitor;
-            _poll = builder.Poll;
+            _monitor = new GenericCommunicationMonitor(
+                this, 
+                builder.Coms, 
+                30000, 
+                120000, 
+                240000,
+                ApOutletStatusCommands.GetAllOutletStatusCommand());
+             
+            NameFeedback = new StringFeedback("DeviceNameFeedback", () => Name);
+            Feedbacks.Add(IsOnline);
+            Feedbacks.Add(NameFeedback);
 
+            var gather = new CommunicationGather(builder.Coms, "\n");
+            gather.LineReceived +=
+                (o, textArgs) => ProcessResponse(_outlets, textArgs.Text);
+
+            /*
             var socket = builder.Coms as ISocketStatus;
             if (socket != null)
             {
                 socket.ConnectionChange +=
                     (sender, args) =>
-                        {
-                            if (args.Client.IsConnected)
-                                _poll.Reset(2000, 30000);
-                            else
-                            {
-                                _poll.Stop();
-                            }
-                        };
+                        Debug.Console(1, this, Debug.ErrorLogLevel.Notice, "ConnectionStatus:{0}",
+                            args.Client.ClientStatus.ToString());
+            }*/
+
+            CrestronEnvironment.ProgramStatusEventHandler += type =>
+            {
+                if (type != eProgramStatusEventType.Stopping)
+                    return;
+
+                CommunicationMonitor.Stop();
+            };
+
+            DeviceManager.AllDevicesActivated += (sender, args) =>
+                {
+                    try
+                    {
+                        builder.Coms.Connect();
+                        CommunicationMonitor.Start();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.Console(0,
+                            this,
+                            Debug.ErrorLogLevel.Error,
+                            "Error handling all devices activated : {0}",
+                            ex.Message);
+                    }
+                };
+        }
+
+        public static void ProcessResponse(ReadOnlyDictionary<uint, IApOutlet> outlets, string response)
+        {
+            var responseToProcess = response.Trim().Split(new[] { ':' });
+            if (responseToProcess.Count() != 3)
+                return;
+
+            try
+            {
+                var outletIndex = Convert.ToUInt32(responseToProcess[0]);
+                IApOutlet outlet;
+                if (!outlets.TryGetValue(outletIndex, out outlet))
+                    return;
+
+                if (responseToProcess[2].Contains("On"))
+                {
+                    outlet.PowerStatus = true;
+                }
+                else if (responseToProcess[2].Contains("Off"))
+                {
+                    outlet.PowerStatus = false;
+                }
+                else
+                {
+                    Debug.Console(1,
+                        "Not sure where to go with this response: {0}",
+                        response);
+                }
+
+                outlet.SetIsOnline();
             }
-
-            AddPostActivationAction(() => builder.Coms.Connect());
-
-            NameFeedback = new StringFeedback("DeviceNameFeedback", () => builder.Name);
-            Feedbacks.Add(IsOnline);
-            Feedbacks.Add(NameFeedback);
+            catch (Exception ex)
+            {
+                Debug.Console(1, "Error processing response: {0}{1}", response, ex.Message);
+            }
         }
 
         public StatusMonitorBase CommunicationMonitor
         {
-            get { return _monitor.CommunicationMonitor; }
+            get { return _monitor; }
         }
 
         public StringFeedback NameFeedback { get; private set; }
@@ -59,7 +122,7 @@ namespace ApcEpi.Devices
 
         public BoolFeedback IsOnline
         {
-            get { return _monitor.CommunicationMonitor.IsOnlineFeedback; }
+            get { return _monitor.IsOnlineFeedback; }
         }
 
         public override bool CustomActivate()
@@ -76,6 +139,7 @@ namespace ApcEpi.Devices
                 Feedbacks.AddRange(apOutletFeedbacks);
             }
 
+            Feedbacks.Add(_monitor.IsOnlineFeedback);
             foreach (var feedback in Feedbacks)
             {
                 feedback.OutputChange += (sender, args) =>
@@ -95,12 +159,10 @@ namespace ApcEpi.Devices
                     };
             }
 
-            CommunicationMonitor.Start();
-
             return true;
         }
 
-        public void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
+        public override void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
         {
             var joinMap = new ApDeviceJoinMap(joinStart);
 
@@ -202,7 +264,6 @@ namespace ApcEpi.Devices
             if (_outlets.TryGetValue(outletIndex, out outlet))
             {
                 outlet.PowerToggle();
-                ResetPoll();
                 return;
             }
 
@@ -248,7 +309,6 @@ namespace ApcEpi.Devices
             if (_outlets.TryGetValue(outletIndex, out outlet))
             {
                 outlet.PowerOff();
-                ResetPoll();
                 return;
             }
 
@@ -261,25 +321,10 @@ namespace ApcEpi.Devices
             if (_outlets.TryGetValue(outletIndex, out outlet))
             {
                 outlet.PowerOn();
-                ResetPoll();
                 return;
             }
 
             Debug.Console(1, this, "Outlet at index-{0} does not exist", outletIndex);
-        }
-
-        public static void PollDevice(IBasicCommunication coms)
-        {
-            if (coms == null)
-                return;
-
-            var command = ApOutletStatusCommands.GetAllOutletStatusCommand();
-            coms.SendText(command);
-        }
-
-        private void ResetPoll()
-        {
-            _poll.Reset(1000, 10000);
         }
     }
 }

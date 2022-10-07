@@ -106,6 +106,7 @@
     <Compile Include="Abstractions\IApDevice.cs" />
     <Compile Include="Entities\Outlet\ApOutlet.cs" />
     <Compile Include="Entities\Outlet\ApOutletOnline.cs" />
+    <Compile Include="Messages\ConnectionQueueMessage.cs" />
     <Compile Include="Services\NameCommands\ApOutletName.cs" />
     <Compile Include="Entities\Outlet\ApOutletPower.cs" />
     <Compile Include="JoinMaps\ApDeviceJoinMap.cs" />

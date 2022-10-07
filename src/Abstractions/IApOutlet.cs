@@ -12,5 +12,7 @@ namespace ApcEpi.Abstractions
     {
         int OutletIndex { get; }
         StringFeedback NameFeedback { get; }
+        bool PowerStatus { get; set; }
+        void SetIsOnline();
     }
 }

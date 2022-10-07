@@ -7,7 +7,6 @@ using Crestron.SimplSharp;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Config;
-using PepperDash.Essentials.Core.Devices;
 
 namespace ApcEpi.Builders
 {
@@ -19,21 +18,13 @@ namespace ApcEpi.Builders
             Name = name;
             Key = key;
             Outlets = BuildOutletsFromConfig(key, config, coms);
-            Monitor = new GenericCommunicationMonitoredDevice(
-                Key,
-                Name,
-                Coms,
-                "about\r");
-
-            Poll = new CTimer(_ => ApDevice.PollDevice(coms), null, Timeout.Infinite);
         }
 
         public string Key { get; private set; }
         public string Name { get; private set; }
         public IBasicCommunication Coms { get; private set; }
-        public ICommunicationMonitor Monitor { get; private set; }
+
         public ReadOnlyDictionary<uint, IApOutlet> Outlets { get; private set; }
-        public CTimer Poll { get; private set; }
 
         public static ReadOnlyDictionary<uint, IApOutlet> BuildOutletsFromConfig(
             string parentKey,
@@ -42,7 +33,7 @@ namespace ApcEpi.Builders
         {
             var outlets = config
                 .Outlets
-                .Select(x => new ApOutlet(parentKey + "-" + x.Key, x.Value.Name, x.Value.OutletIndex, coms))
+                .Select(x => new ApOutlet(x.Key, x.Value.Name, x.Value.OutletIndex, parentKey, coms))
                 .ToDictionary<ApOutlet, uint, IApOutlet>(outlet => (uint) outlet.OutletIndex, outlet => outlet);
 
             return new ReadOnlyDictionary<uint, IApOutlet>(outlets);
@@ -58,7 +49,6 @@ namespace ApcEpi.Builders
 
         public EssentialsDevice Build()
         {
-            Debug.Console(1, this, "Building...");
             return new ApDevice(this);
         }
     }
