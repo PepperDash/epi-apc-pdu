@@ -1,7 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApcEpi", "src/ApcEpi.csproj", "{9D249E47-8F95-4437-A6BB-563510287AD1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApcEpi", "src\ApcEpi.csproj", "{9D249E47-8F95-4437-A6BB-563510287AD1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{3699BBAD-D83B-479A-9896-9CDA2E5998EA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "testing", "testing", "{3E9860BF-E3F8-48B6-922A-CBE42C01113A}"
+	ProjectSection(SolutionItems) = preProject
+		testing\configurationFile.json = testing\configurationFile.json
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -16,5 +23,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{9D249E47-8F95-4437-A6BB-563510287AD1} = {3699BBAD-D83B-479A-9896-9CDA2E5998EA}
 	EndGlobalSection
 EndGlobal

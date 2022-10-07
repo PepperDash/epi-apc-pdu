@@ -10,6 +10,7 @@
 *.userosscache
 *.sln.docstates
 *.projectinfo
+*.csproj.user
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -360,3 +361,5 @@ MigrationBackup/
 # VS Code settings folders
 .vscode/
 *.projectinfo
+
+SPlsWork/
