@@ -5,6 +5,7 @@ using ApcEpi.JoinMaps;
 using ApcEpi.Services.StatusCommands;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro.DeviceSupport;
+using Crestron.SimplSharp.Ssh;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
@@ -23,7 +24,12 @@ namespace ApcEpi.Devices
             Feedbacks = new FeedbackCollection<Feedback>();
 
             _outlets = builder.Outlets;
-            _monitor = new GenericCommunicationMonitor(this, builder.Coms, 30000, 120000, 240000,
+            _monitor = new GenericCommunicationMonitor(
+                this, 
+                builder.Coms, 
+                30000, 
+                120000, 
+                240000,
                 ApOutletStatusCommands.GetAllOutletStatusCommand());
              
             NameFeedback = new StringFeedback("DeviceNameFeedback", () => Name);
@@ -34,11 +40,30 @@ namespace ApcEpi.Devices
             gather.LineReceived +=
                 (o, textArgs) => ProcessResponse(_outlets, textArgs.Text);
 
+            /*
+            var socket = builder.Coms as ISocketStatus;
+            if (socket != null)
+            {
+                socket.ConnectionChange +=
+                    (sender, args) =>
+                        Debug.Console(1, this, Debug.ErrorLogLevel.Notice, "ConnectionStatus:{0}",
+                            args.Client.ClientStatus.ToString());
+            }*/
+
+            CrestronEnvironment.ProgramStatusEventHandler += type =>
+            {
+                if (type != eProgramStatusEventType.Stopping)
+                    return;
+
+                CommunicationMonitor.Stop();
+            };
+
             DeviceManager.AllDevicesActivated += (sender, args) =>
                 {
                     try
                     {
                         builder.Coms.Connect();
+                        CommunicationMonitor.Start();
                     }
                     catch (Exception ex)
                     {
@@ -134,7 +159,6 @@ namespace ApcEpi.Devices
                     };
             }
 
-            CommunicationMonitor.Start();
             return true;
         }
 
