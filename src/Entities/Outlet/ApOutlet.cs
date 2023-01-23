@@ -1,8 +1,11 @@
 ﻿using System;
 using ApcEpi.Abstractions;
 using ApcEpi.Services.NameCommands;
+using Crestron.SimplSharp;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
+using PepperDash_Essentials_Core.Devices;
+
 
 namespace ApcEpi.Entities.Outlet
 {
@@ -11,12 +14,16 @@ namespace ApcEpi.Entities.Outlet
     {
         private readonly ApOutletOnline _online;
         private readonly ApOutletPower _power;
+        public int PowerCycleTimeMs { get; private set; }
+        private readonly CTimer _powerCycleTimer;
 
-        public ApOutlet(string key, string name, int outletIndex, string parentDeviceKey, IBasicCommunication coms)
+
+        public ApOutlet(string key, string name, int outletIndex, string parentDeviceKey, IBasicCommunication coms, int powerCycleTimeMs)
         {
-            Key = key;
+            Key = parentDeviceKey + "-" + key;
             Name = name;
             OutletIndex = outletIndex;
+            PowerCycleTimeMs = powerCycleTimeMs;
             NameFeedback = new StringFeedback(
                 parentDeviceKey + "-" + Key + "-OutletName", 
                 () => String.IsNullOrEmpty(Name) ? string.Empty : Name);
@@ -32,12 +39,11 @@ namespace ApcEpi.Entities.Outlet
                     if (!args.Client.IsConnected)
                         return;
 
-                    var outletNameCommand = ApOutletNameCommands
-                        .GetOutletNameCommand(outletIndex, key);
+                    ApOutletNameCommands.GetOutletNameCommand(outletIndex, key);
 
-                    //coms.SendText(outletNameCommand);
                 };
             }
+            _powerCycleTimer = new CTimer(PowerOnDue, Timeout.Infinite);
         }
 
         public BoolFeedback IsOnline
@@ -71,6 +77,11 @@ namespace ApcEpi.Entities.Outlet
             _power.PowerOn();
         }
 
+        private void PowerOnDue(object obj)
+        {
+            _power.PowerOn();
+            _powerCycleTimer.Reset(Timeout.Infinite);
+        }
         public void PowerToggle()
         {
             _power.PowerToggle();
@@ -89,5 +100,14 @@ namespace ApcEpi.Entities.Outlet
         {
             _online.SetIsOnline();
         }
+
+
+        public void PowerCycle()
+        {
+            PowerOff();
+            _powerCycleTimer.Reset(PowerCycleTimeMs);
+        }
+
+
     }
 }

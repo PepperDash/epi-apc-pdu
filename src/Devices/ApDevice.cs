@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using ApcEpi.Abstractions;
+using ApcEpi.Entities.Outlet;
 using ApcEpi.JoinMaps;
 using ApcEpi.Services.StatusCommands;
 using Crestron.SimplSharp;
@@ -10,20 +11,23 @@ using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
 using Feedback = PepperDash.Essentials.Core.Feedback;
+using PepperDash_Essentials_Core.Devices;
+
 
 namespace ApcEpi.Devices
 {
-    public class ApDevice: EssentialsBridgeableDevice, IOutletName, IOutletPower, IOutletOnline
+    public class ApDevice : EssentialsBridgeableDevice, IOutletName, IOutletPower, IOutletOnline, IHasControlledPowerOutlets
     {
         private readonly StatusMonitorBase _monitor;
-        private readonly ReadOnlyDictionary<uint, IApOutlet> _outlets;
+        public ReadOnlyDictionary<int, IHasPowerCycle> PduOutlets { get; private set; }
+        private readonly bool _useEssentialsConfig;
 
         public ApDevice(IApDeviceBuilder builder)
             : base(builder.Key, builder.Name)
         {
             Feedbacks = new FeedbackCollection<Feedback>();
 
-            _outlets = builder.Outlets;
+            PduOutlets = builder.Outlets;
             _monitor = new GenericCommunicationMonitor(
                 this, 
                 builder.Coms, 
@@ -36,9 +40,11 @@ namespace ApcEpi.Devices
             Feedbacks.Add(IsOnline);
             Feedbacks.Add(NameFeedback);
 
+            _useEssentialsConfig = builder.UseEssentialsJoinMap;
+
             var gather = new CommunicationGather(builder.Coms, "\n");
             gather.LineReceived +=
-                (o, textArgs) => ProcessResponse(_outlets, textArgs.Text);
+                (o, textArgs) => ProcessResponse(PduOutlets, textArgs.Text);
 
             /*
             var socket = builder.Coms as ISocketStatus;
@@ -76,7 +82,7 @@ namespace ApcEpi.Devices
                 };
         }
 
-        public static void ProcessResponse(ReadOnlyDictionary<uint, IApOutlet> outlets, string response)
+        public static void ProcessResponse(ReadOnlyDictionary<int, IHasPowerCycle> outlets, string response)
         {
             var responseToProcess = response.Trim().Split(new[] { ':' });
             if (responseToProcess.Count() != 3)
@@ -85,17 +91,18 @@ namespace ApcEpi.Devices
             try
             {
                 var outletIndex = Convert.ToUInt32(responseToProcess[0]);
-                IApOutlet outlet;
-                if (!outlets.TryGetValue(outletIndex, out outlet))
+                IHasPowerCycle outlet;
+                if (!outlets.TryGetValue((int)outletIndex, out outlet))
                     return;
-
+                var apOutlet = outlet as IApOutlet;
+                if (apOutlet == null) return;
                 if (responseToProcess[2].Contains("On"))
                 {
-                    outlet.PowerStatus = true;
+                    apOutlet.PowerStatus = true;
                 }
                 else if (responseToProcess[2].Contains("Off"))
                 {
-                    outlet.PowerStatus = false;
+                    apOutlet.PowerStatus = false;
                 }
                 else
                 {
@@ -104,7 +111,7 @@ namespace ApcEpi.Devices
                         response);
                 }
 
-                outlet.SetIsOnline();
+                apOutlet.SetIsOnline();
             }
             catch (Exception ex)
             {
@@ -127,17 +134,16 @@ namespace ApcEpi.Devices
 
         public override bool CustomActivate()
         {
-            foreach (var apOutletFeedbacks in _outlets
-                .Values
-                .Select(x => new Feedback[]
-                    {
-                        x.IsOnline, 
-                        x.NameFeedback, 
-                        x.PowerIsOnFeedback
-                    }))
+            foreach (var o in PduOutlets.Select(outlet => outlet.Value).OfType<IApOutlet>())
             {
-                Feedbacks.AddRange(apOutletFeedbacks);
+                Feedbacks.AddRange(new Feedback[]
+                {
+                    o.IsOnline,
+                    o.NameFeedback,
+                    o.PowerIsOnFeedback
+                });
             }
+
 
             Feedbacks.Add(_monitor.IsOnlineFeedback);
             foreach (var feedback in Feedbacks)
@@ -164,20 +170,23 @@ namespace ApcEpi.Devices
 
         public override void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
         {
-            var joinMap = new ApDeviceJoinMap(joinStart);
 
-            if (bridge != null)
-                bridge.AddJoinMap(Key, joinMap);
+            if (!_useEssentialsConfig)
+            {
+                var joinMap = new ApDeviceJoinMap(joinStart);
 
-            var customJoins = JoinMapHelper.TryGetJoinMapAdvancedForDevice(joinMapKey);
+                if (bridge != null)
+                    bridge.AddJoinMap(Key, joinMap);
 
-            if (customJoins != null)
-                joinMap.SetCustomJoinData(customJoins);
+                var customJoins = JoinMapHelper.TryGetJoinMapAdvancedForDevice(joinMapKey);
 
-            Debug.Console(1, "Linking to Trilist '{0}'", trilist.ID.ToString("X"));
-            Debug.Console(1, "Linking to Bridge Type {0}", GetType().Name);
+                if (customJoins != null)
+                    joinMap.SetCustomJoinData(customJoins);
 
-            trilist.OnlineStatusChange += (device, args) =>
+                Debug.Console(1, "Linking to Trilist '{0}'", trilist.ID.ToString("X"));
+                Debug.Console(1, "Linking to Bridge Type {0}", GetType().Name);
+
+                trilist.OnlineStatusChange += (device, args) =>
                 {
                     if (!args.DeviceOnLine)
                         return;
@@ -186,82 +195,190 @@ namespace ApcEpi.Devices
                         feedback.FireUpdate();
                 };
 
-            IsOnline.LinkInputSig(trilist.BooleanInput[joinMap.DeviceOnline.JoinNumber]);
-            NameFeedback.LinkInputSig(trilist.StringInput[joinMap.DeviceName.JoinNumber]);
+                IsOnline.LinkInputSig(trilist.BooleanInput[joinMap.DeviceOnline.JoinNumber]);
+                NameFeedback.LinkInputSig(trilist.StringInput[joinMap.DeviceName.JoinNumber]);
 
-            for (uint x = 0; x < joinMap.OutletName.JoinSpan; x++)
+                for (uint x = 0; x < joinMap.OutletName.JoinSpan; x++)
+                {
+                    var outletIndex = x + 1;
+                    StringFeedback feedback;
+                    if (!TryGetOutletNameFeedback(outletIndex, out feedback))
+                        continue;
+
+                    var joinActual = outletIndex + joinMap.OutletName.JoinNumber;
+
+                    Debug.Console(2, this, "Linking Outlet Name Feedback | OutletIndex:{0}, Join:{1}", outletIndex,
+                        joinActual);
+                    feedback.LinkInputSig(trilist.StringInput[joinActual]);
+                }
+
+                for (uint x = 0; x < joinMap.OutletOnline.JoinSpan; x++)
+                {
+                    var outletIndex = x + 1;
+                    BoolFeedback feedback;
+                    if (!TryGetOutletOnlineFeedback(outletIndex, out feedback))
+                        continue;
+
+                    var joinActual = outletIndex + joinMap.OutletName.JoinNumber;
+
+                    Debug.Console(2, this, "Linking Outlet Online Feedback | OutletIndex:{0}, Join:{1}", outletIndex,
+                        joinActual);
+                    feedback.LinkInputSig(trilist.BooleanInput[joinActual]);
+                }
+
+                for (uint x = 0; x < joinMap.OutletPowerOn.JoinSpan; x++)
+                {
+                    var outletIndex = x + 1;
+                    BoolFeedback feedback;
+                    if (!TryGetOutletPowerFeedback(outletIndex, out feedback))
+                        continue;
+
+                    var joinActual = outletIndex + joinMap.OutletPowerOn.JoinNumber;
+
+                    Debug.Console(2, this, "Linking Outlet PowerIsOn Feedback | OutletIndex:{0}, Join:{1}", outletIndex,
+                        joinActual);
+                    feedback.LinkInputSig(trilist.BooleanInput[joinActual]);
+
+                    Debug.Console(2, this, "Linking Outlet PowerOn Method | OutletIndex:{0}, Join:{1}", outletIndex,
+                        joinActual);
+                    trilist.SetSigTrueAction(joinActual, () => TurnOutletOn(outletIndex));
+                }
+
+                for (uint x = 0; x < joinMap.OutletPowerOff.JoinSpan; x++)
+                {
+                    var outletIndex = x + 1;
+                    BoolFeedback feedback;
+                    if (!TryGetOutletPowerFeedback(outletIndex, out feedback))
+                        continue;
+
+                    var joinActual = outletIndex + joinMap.OutletPowerOff.JoinNumber;
+
+                    Debug.Console(2, this, "Linking Outlet PowerOff Method | OutletIndex:{0}, Join:{1}", outletIndex,
+                        joinActual);
+                    trilist.SetSigTrueAction(joinActual, () => TurnOutletOff(outletIndex));
+                }
+
+                for (uint x = 0; x < joinMap.OutletPowerToggle.JoinSpan; x++)
+                {
+                    var outletIndex = x + 1;
+                    BoolFeedback feedback;
+                    if (!TryGetOutletPowerFeedback(outletIndex, out feedback))
+                        continue;
+
+                    var joinActual = outletIndex + joinMap.OutletPowerToggle.JoinNumber;
+
+                    Debug.Console(2, this, "Linking Outlet PowerToggle Method | OutletIndex:{0}, Join:{1}", outletIndex,
+                        joinActual);
+                    trilist.SetSigTrueAction(joinActual, () => ToggleOutletPower(outletIndex));
+                }
+            }
+            else
             {
-                var outletIndex = x + 1;
-                StringFeedback feedback;
-                if (!TryGetOutletNameFeedback(outletIndex, out feedback))
-                    continue;
-     
-                var joinActual = outletIndex + joinMap.OutletName.JoinNumber;
+                var joinMap = new PduJoinMapBase(joinStart);
 
-                Debug.Console(2, this, "Linking Outlet Name Feedback | OutletIndex:{0}, Join:{1}", outletIndex, joinActual);
-                feedback.LinkInputSig(trilist.StringInput[joinActual]);
+                if (bridge != null)
+                    bridge.AddJoinMap(Key, joinMap);
+
+                var customJoins = JoinMapHelper.TryGetJoinMapAdvancedForDevice(joinMapKey);
+
+                if (customJoins != null)
+                    joinMap.SetCustomJoinData(customJoins);
+
+                Debug.Console(1, "Linking to Trilist '{0}'", trilist.ID.ToString("X"));
+                Debug.Console(1, "Linking to Bridge Type {0}", GetType().Name);
+
+                trilist.OnlineStatusChange += (device, args) =>
+                {
+                    if (!args.DeviceOnLine)
+                        return;
+
+                    foreach (var feedback in Feedbacks)
+                        feedback.FireUpdate();
+                };
+
+                IsOnline.LinkInputSig(trilist.BooleanInput[joinMap.Online.JoinNumber]);
+                NameFeedback.LinkInputSig(trilist.StringInput[joinMap.Name.JoinNumber]);
+
+                for (uint x = 0; x < joinMap.OutletName.JoinSpan; x++)
+                {
+                    var outletIndex = x + 1;
+                    StringFeedback feedback;
+                    if (!TryGetOutletNameFeedback(outletIndex, out feedback))
+                        continue;
+
+                    var joinActual = outletIndex + joinMap.OutletName.JoinNumber;
+
+                    Debug.Console(2, this, "Linking Outlet Name Feedback | OutletIndex:{0}, Join:{1}", outletIndex,
+                        joinActual);
+                    feedback.LinkInputSig(trilist.StringInput[joinActual]);
+                }
+
+
+                for (uint x = 0; x < joinMap.OutletPowerOn.JoinSpan; x++)
+                {
+                    var outletIndex = x + 1;
+                    BoolFeedback feedback;
+                    if (!TryGetOutletPowerFeedback(outletIndex, out feedback))
+                        continue;
+
+                    var joinActual = outletIndex + joinMap.OutletPowerOn.JoinNumber;
+
+                    Debug.Console(2, this, "Linking Outlet PowerIsOn Feedback | OutletIndex:{0}, Join:{1}", outletIndex,
+                        joinActual);
+                    feedback.LinkInputSig(trilist.BooleanInput[joinActual]);
+
+                    Debug.Console(2, this, "Linking Outlet PowerOn Method | OutletIndex:{0}, Join:{1}", outletIndex,
+                        joinActual);
+                    trilist.SetSigTrueAction(joinActual, () => TurnOutletOn(outletIndex));
+                }
+
+                for (uint x = 0; x < joinMap.OutletPowerOff.JoinSpan; x++)
+                {
+                    var outletIndex = x + 1;
+                    BoolFeedback feedback;
+                    if (!TryGetOutletPowerFeedback(outletIndex, out feedback))
+                        continue;
+
+                    var joinActual = outletIndex + joinMap.OutletPowerOff.JoinNumber;
+
+                    Debug.Console(2, this, "Linking Outlet PowerOff Method | OutletIndex:{0}, Join:{1}", outletIndex,
+                        joinActual);
+                    trilist.SetSigTrueAction(joinActual, () => TurnOutletOff(outletIndex));
+                }
+
+                for (uint x = 0; x < joinMap.OutletPowerCycle.JoinSpan; x++)
+                {
+                    var outletIndex = x + 1;
+                    BoolFeedback feedback;
+                    if (!TryGetOutletPowerFeedback(outletIndex, out feedback))
+                        continue;
+
+                    var joinActual = outletIndex + joinMap.OutletPowerCycle.JoinNumber;
+
+                    Debug.Console(2, this, "Linking Outlet PowerToggle Method | OutletIndex:{0}, Join:{1}", outletIndex,
+                        joinActual);
+                    trilist.SetSigTrueAction(joinActual, () => OutletPowerCycle(outletIndex));
+                }
+            }
+        }
+
+        public void OutletPowerCycle(uint outletIndex)
+        {
+            IHasPowerCycle outlet;
+            if (PduOutlets.TryGetValue((int)outletIndex, out outlet))
+            {
+                outlet.PowerCycle();
+                return;
             }
 
-            for (uint x = 0; x < joinMap.OutletOnline.JoinSpan; x++)
-            {
-                var outletIndex = x + 1;
-                BoolFeedback feedback;
-                if (!TryGetOutletOnlineFeedback(outletIndex, out feedback))
-                    continue;
+            Debug.Console(1, this, "Outlet at index-{0} does not exist", outletIndex);
 
-                var joinActual = outletIndex + joinMap.OutletName.JoinNumber;
-
-                Debug.Console(2, this, "Linking Outlet Online Feedback | OutletIndex:{0}, Join:{1}", outletIndex, joinActual);
-                feedback.LinkInputSig(trilist.BooleanInput[joinActual]);
-            }
-
-            for (uint x = 0; x < joinMap.OutletPowerOn.JoinSpan; x++)
-            {
-                var outletIndex = x + 1;
-                BoolFeedback feedback;
-                if (!TryGetOutletPowerFeedback(outletIndex, out feedback))
-                    continue;
-
-                var joinActual = outletIndex + joinMap.OutletPowerOn.JoinNumber;
-
-                Debug.Console(2, this, "Linking Outlet PowerIsOn Feedback | OutletIndex:{0}, Join:{1}", outletIndex, joinActual);
-                feedback.LinkInputSig(trilist.BooleanInput[joinActual]);
-
-                Debug.Console(2, this, "Linking Outlet PowerOn Method | OutletIndex:{0}, Join:{1}", outletIndex, joinActual);
-                trilist.SetSigTrueAction(joinActual, () => TurnOutletOn(outletIndex));
-            }
-
-            for (uint x = 0; x < joinMap.OutletPowerOff.JoinSpan; x++)
-            {
-                var outletIndex = x + 1;
-                BoolFeedback feedback;
-                if (!TryGetOutletPowerFeedback(outletIndex, out feedback))
-                    continue;
-
-                var joinActual = outletIndex + joinMap.OutletPowerOff.JoinNumber;
-
-                Debug.Console(2, this, "Linking Outlet PowerOff Method | OutletIndex:{0}, Join:{1}", outletIndex, joinActual);
-                trilist.SetSigTrueAction(joinActual, () => TurnOutletOff(outletIndex));
-            }
-
-            for (uint x = 0; x < joinMap.OutletPowerToggle.JoinSpan; x++)
-            {
-                var outletIndex = x + 1;
-                BoolFeedback feedback;
-                if (!TryGetOutletPowerFeedback(outletIndex, out feedback))
-                    continue;
-
-                var joinActual = outletIndex + joinMap.OutletPowerToggle.JoinNumber;
-
-                Debug.Console(2, this, "Linking Outlet PowerToggle Method | OutletIndex:{0}, Join:{1}", outletIndex, joinActual);
-                trilist.SetSigTrueAction(joinActual, () => ToggleOutletPower(outletIndex));
-            }
         }
 
         public void ToggleOutletPower(uint outletIndex)
         {
-            IApOutlet outlet;
-            if (_outlets.TryGetValue(outletIndex, out outlet))
+            IHasPowerCycle outlet;
+            if (PduOutlets.TryGetValue((int)outletIndex, out outlet))
             {
                 outlet.PowerToggle();
                 return;
@@ -273,40 +390,42 @@ namespace ApcEpi.Devices
         public bool TryGetOutletNameFeedback(uint outletIndex, out StringFeedback result)
         {
             result = new StringFeedback(Key + "-OutletName-" + outletIndex, () => String.Empty);
-            IApOutlet outlet;
-            if (!_outlets.TryGetValue(outletIndex, out outlet))
+            IHasPowerCycle outlet;
+            if (!PduOutlets.TryGetValue((int)outletIndex, out outlet))
                 return false;
+            var apOutlet = outlet as IApOutlet;
+            result = apOutlet != null ? apOutlet.NameFeedback : new StringFeedback(() => "Unknown");
 
-            result = outlet.NameFeedback;
             return true;
         }
 
         public bool TryGetOutletOnlineFeedback(uint outletIndex, out BoolFeedback result)
         {
             result = new BoolFeedback(Key + "-OutletName-" + outletIndex, () => false);
-            IApOutlet outlet;
-            if (!_outlets.TryGetValue(outletIndex, out outlet))
+            IHasPowerCycle outlet;
+            if (!PduOutlets.TryGetValue((int)outletIndex, out outlet))
                 return false;
-
-            result = outlet.IsOnline;
+            var apOutlet = outlet as IApOutlet;
+            result = apOutlet != null ? apOutlet.IsOnline : new BoolFeedback(() => false);
             return true;
         }
 
         public bool TryGetOutletPowerFeedback(uint outletIndex, out BoolFeedback result)
         {
             result = new BoolFeedback(Key + "-OutletPower-" + outletIndex, () => false);
-            IApOutlet outlet;
-            if (!_outlets.TryGetValue(outletIndex, out outlet))
+            IHasPowerCycle outlet;
+            if (!PduOutlets.TryGetValue((int)outletIndex, out outlet))
                 return false;
+            var apOutlet = outlet as IApOutlet;
+            result = apOutlet != null ? apOutlet.PowerIsOnFeedback : new BoolFeedback(() => false);
 
-            result = outlet.PowerIsOnFeedback;
             return true;
         }
 
         public void TurnOutletOff(uint outletIndex)
         {
-            IApOutlet outlet;
-            if (_outlets.TryGetValue(outletIndex, out outlet))
+            IHasPowerCycle outlet;
+            if (PduOutlets.TryGetValue((int)outletIndex, out outlet))
             {
                 outlet.PowerOff();
                 return;
@@ -317,8 +436,8 @@ namespace ApcEpi.Devices
 
         public void TurnOutletOn(uint outletIndex)
         {
-            IApOutlet outlet;
-            if (_outlets.TryGetValue(outletIndex, out outlet))
+            IHasPowerCycle outlet;
+            if (PduOutlets.TryGetValue((int)outletIndex, out outlet))
             {
                 outlet.PowerOn();
                 return;
@@ -326,5 +445,7 @@ namespace ApcEpi.Devices
 
             Debug.Console(1, this, "Outlet at index-{0} does not exist", outletIndex);
         }
+
+
     }
 }

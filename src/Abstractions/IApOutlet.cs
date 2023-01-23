@@ -5,10 +5,11 @@ using System.Text;
 using Crestron.SimplSharp;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
+using PepperDash_Essentials_Core.Devices;
 
 namespace ApcEpi.Abstractions
 {
-    public interface IApOutlet : IKeyName, IOnline, IPower
+    public interface IApOutlet : IOnline, IHasPowerCycle
     {
         int OutletIndex { get; }
         StringFeedback NameFeedback { get; }
