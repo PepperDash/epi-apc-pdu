@@ -17,5 +17,6 @@ namespace ApcEpi.Abstractions
         ReadOnlyDictionary<int, IHasPowerCycle> Outlets { get; } 
         EssentialsDevice Build();
         bool UseEssentialsJoinMap { get;  }
+        bool EnableAsOnline { get; }
     }
 }
