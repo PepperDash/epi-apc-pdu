@@ -11,7 +11,9 @@ namespace ApcEpi.Config
     public class ApDeviceConfig
     {
         public ControlPropertiesConfig Control { get; set; }
+        public int PowerCycleTimeMs { get; set; }
         public Dictionary<string, ApOutletConfig> Outlets { get; set; }
+        public bool UseEssentialsJoinmap { get; set; }
     }
 
     public class ApOutletConfig

@@ -7,6 +7,7 @@ using Crestron.SimplSharp;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Config;
+using PepperDash_Essentials_Core.Devices;
 
 namespace ApcEpi.Builders
 {
@@ -17,26 +18,34 @@ namespace ApcEpi.Builders
             Coms = coms;
             Name = name;
             Key = key;
+            UseEssentialsJoinMap = config.UseEssentialsJoinmap;
             Outlets = BuildOutletsFromConfig(key, config, coms);
+
+            foreach (var outlet in Outlets)
+            {
+                var o = outlet;
+                DeviceManager.AddDevice(o.Value);
+            }
         }
 
         public string Key { get; private set; }
         public string Name { get; private set; }
         public IBasicCommunication Coms { get; private set; }
+        public bool UseEssentialsJoinMap { get; private set; }
 
-        public ReadOnlyDictionary<uint, IApOutlet> Outlets { get; private set; }
+        public ReadOnlyDictionary<int, IHasPowerCycle> Outlets { get; private set; }
 
-        public static ReadOnlyDictionary<uint, IApOutlet> BuildOutletsFromConfig(
+        public static ReadOnlyDictionary<int, IHasPowerCycle> BuildOutletsFromConfig(
             string parentKey,
             ApDeviceConfig config,
             IBasicCommunication coms)
         {
             var outlets = config
                 .Outlets
-                .Select(x => new ApOutlet(x.Key, x.Value.Name, x.Value.OutletIndex, parentKey, coms))
-                .ToDictionary<ApOutlet, uint, IApOutlet>(outlet => (uint) outlet.OutletIndex, outlet => outlet);
+                .Select(x => new ApOutlet(x.Key, x.Value.Name, x.Value.OutletIndex, parentKey, coms, config.PowerCycleTimeMs))
+                .ToDictionary<ApOutlet, int, IHasPowerCycle>(outlet => outlet.OutletIndex, outlet => outlet);
 
-            return new ReadOnlyDictionary<uint, IApOutlet>(outlets);
+            return new ReadOnlyDictionary<int, IHasPowerCycle>(outlets);
         }
 
         public static IApDeviceBuilder GetFromDeviceConfig(DeviceConfig dc)
@@ -51,5 +60,6 @@ namespace ApcEpi.Builders
         {
             return new ApDevice(this);
         }
+
     }
 }

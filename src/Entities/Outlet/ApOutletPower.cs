@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using ApcEpi.Services.PowerCommands;
+﻿using ApcEpi.Services.PowerCommands;
 using ApcEpi.Services.StatusCommands;
 using Crestron.SimplSharp;
 using PepperDash.Core;
@@ -8,7 +6,7 @@ using PepperDash.Essentials.Core;
 
 namespace ApcEpi.Entities.Outlet
 {
-    public class ApOutletPower : IPower, IKeyName
+    public class ApOutletPower : IHasPowerControlWithFeedback, IKeyName
     {
         private readonly IBasicCommunication _coms;
 
@@ -63,14 +61,6 @@ namespace ApcEpi.Entities.Outlet
                 PowerOff();
             else
                 PowerOn();
-        }
-
-        private static string GetDataPayloadFromResponse(string response)
-        {
-            response = response.Replace(" ", String.Empty);
-            var splitResponse = response.Split(':');
-
-            return splitResponse.ElementAtOrDefault(2) ?? String.Empty;
         }
 
         public bool PowerStatus
