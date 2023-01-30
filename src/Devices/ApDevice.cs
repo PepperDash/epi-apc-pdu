@@ -20,7 +20,8 @@ namespace ApcEpi.Devices
     {
         private readonly StatusMonitorBase _monitor;
         public ReadOnlyDictionary<int, IHasPowerCycle> PduOutlets { get; private set; }
-        private readonly bool _useEssentialsConfig;
+        bool _useEssentialsJoinmap;
+        private readonly bool _enableAsOnline;
 
         public ApDevice(IApDeviceBuilder builder)
             : base(builder.Key, builder.Name)
@@ -39,8 +40,8 @@ namespace ApcEpi.Devices
             NameFeedback = new StringFeedback("DeviceNameFeedback", () => Name);
             Feedbacks.Add(IsOnline);
             Feedbacks.Add(NameFeedback);
-
-            _useEssentialsConfig = builder.UseEssentialsJoinMap;
+            _enableAsOnline = builder.EnableAsOnline;
+            _useEssentialsJoinmap = builder.UseEssentialsJoinMap;
 
             var gather = new CommunicationGather(builder.Coms, "\n");
             gather.LineReceived +=
@@ -171,7 +172,7 @@ namespace ApcEpi.Devices
         public override void LinkToApi(BasicTriList trilist, uint joinStart, string joinMapKey, EiscApiAdvanced bridge)
         {
 
-            if (!_useEssentialsConfig)
+            if (!_useEssentialsJoinmap)
             {
                 var joinMap = new ApDeviceJoinMap(joinStart);
 
@@ -406,7 +407,12 @@ namespace ApcEpi.Devices
             if (!PduOutlets.TryGetValue((int)outletIndex, out outlet))
                 return false;
             var apOutlet = outlet as IApOutlet;
-            result = apOutlet != null ? apOutlet.IsOnline : new BoolFeedback(() => false);
+            if (!_enableAsOnline)
+            {
+                result = apOutlet != null ? apOutlet.IsOnline : new BoolFeedback(() => false);
+                return true;
+            }
+            result = apOutlet != null ? new BoolFeedback(() => true) : new BoolFeedback(() => false);
             return true;
         }
 

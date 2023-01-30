@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro;
+using Newtonsoft.Json;
 using PepperDash.Core;
 
 namespace ApcEpi.Config
@@ -14,6 +15,8 @@ namespace ApcEpi.Config
         public int PowerCycleTimeMs { get; set; }
         public Dictionary<string, ApOutletConfig> Outlets { get; set; }
         public bool UseEssentialsJoinmap { get; set; }
+        [JsonProperty("enableOutletsOverride")]
+        public bool EnableOutletsOverride { get; set; }
     }
 
     public class ApOutletConfig

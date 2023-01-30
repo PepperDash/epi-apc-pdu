@@ -18,8 +18,10 @@ namespace ApcEpi.Builders
             Coms = coms;
             Name = name;
             Key = key;
+
             UseEssentialsJoinMap = config.UseEssentialsJoinmap;
             Outlets = BuildOutletsFromConfig(key, config, coms);
+            EnableAsOnline = config.EnableOutletsOverride;
 
             foreach (var outlet in Outlets)
             {
@@ -32,6 +34,7 @@ namespace ApcEpi.Builders
         public string Name { get; private set; }
         public IBasicCommunication Coms { get; private set; }
         public bool UseEssentialsJoinMap { get; private set; }
+        public bool EnableAsOnline { get; private set; }
 
         public ReadOnlyDictionary<int, IHasPowerCycle> Outlets { get; private set; }
 
@@ -40,6 +43,7 @@ namespace ApcEpi.Builders
             ApDeviceConfig config,
             IBasicCommunication coms)
         {
+
             var outlets = config
                 .Outlets
                 .Select(x => new ApOutlet(x.Key, x.Value.Name, x.Value.OutletIndex, parentKey, coms, config.PowerCycleTimeMs))
