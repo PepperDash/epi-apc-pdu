@@ -25,7 +25,7 @@ namespace ApcEpi.Entities.Outlet
             OutletIndex = outletIndex;
             PowerCycleTimeMs = powerCycleTimeMs;
             NameFeedback = new StringFeedback(
-                parentDeviceKey + "-" + Key + "-OutletName", 
+                name, 
                 () => String.IsNullOrEmpty(Name) ? string.Empty : Name);
 
             _online = new ApOutletOnline(key, name, outletIndex);
