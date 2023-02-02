@@ -21,7 +21,7 @@ namespace ApcEpi.Devices
         private readonly StatusMonitorBase _monitor;
         public ReadOnlyDictionary<int, IHasPowerCycle> PduOutlets { get; private set; }
         bool _useEssentialsJoinmap;
-        private readonly bool _enableAsOnline;
+        public bool EnableAsOnline { get; private set; }
 
         public ApDevice(IApDeviceBuilder builder)
             : base(builder.Key, builder.Name)
@@ -40,7 +40,7 @@ namespace ApcEpi.Devices
             NameFeedback = new StringFeedback("DeviceNameFeedback", () => Name);
             Feedbacks.Add(IsOnline);
             Feedbacks.Add(NameFeedback);
-            _enableAsOnline = builder.EnableAsOnline;
+            EnableAsOnline = builder.EnableAsOnline;
             _useEssentialsJoinmap = builder.UseEssentialsJoinMap;
 
             var gather = new CommunicationGather(builder.Coms, "\n");
@@ -216,15 +216,20 @@ namespace ApcEpi.Devices
                 for (uint x = 0; x < joinMap.OutletOnline.JoinSpan; x++)
                 {
                     var outletIndex = x + 1;
-                    BoolFeedback feedback;
-                    if (!TryGetOutletOnlineFeedback(outletIndex, out feedback))
-                        continue;
-
                     var joinActual = outletIndex + joinMap.OutletName.JoinNumber;
 
-                    Debug.Console(2, this, "Linking Outlet Online Feedback | OutletIndex:{0}, Join:{1}", outletIndex,
-                        joinActual);
-                    feedback.LinkInputSig(trilist.BooleanInput[joinActual]);
+                    if (!EnableAsOnline)
+                    {
+                        BoolFeedback feedback;
+                        if (!TryGetOutletOnlineFeedback(outletIndex, out feedback))
+                            continue;
+                        Debug.Console(2, this, "Linking Outlet Online Feedback | OutletIndex:{0}, Join:{1}", outletIndex,
+                            joinActual);
+                        feedback.LinkInputSig(trilist.BooleanInput[joinActual]);
+                        continue;
+                    }
+                    trilist.BooleanInput[joinActual].BoolValue = PduOutlets.ContainsKey((int)outletIndex);
+
                 }
 
                 for (uint x = 0; x < joinMap.OutletPowerOn.JoinSpan; x++)
@@ -407,15 +412,10 @@ namespace ApcEpi.Devices
             if (!PduOutlets.TryGetValue((int)outletIndex, out outlet))
                 return false;
             var apOutlet = outlet as IApOutlet;
-            if (!_enableAsOnline)
-            {
-                result = apOutlet != null ? apOutlet.IsOnline : new BoolFeedback(() => false);
-                return true;
-            }
-            result = apOutlet != null ? new BoolFeedback(() => true) : new BoolFeedback(() => false);
+            if (apOutlet == null) return false;
+            result = apOutlet.IsOnline;
             return true;
         }
-
         public bool TryGetOutletPowerFeedback(uint outletIndex, out BoolFeedback result)
         {
             result = new BoolFeedback(Key + "-OutletPower-" + outletIndex, () => false);
