@@ -7,6 +7,7 @@ using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Queues;
 using PepperDash_Essentials_Core.Devices;
+using ApcEpi.Config;
 
 
 namespace ApcEpi.Abstractions
@@ -18,5 +19,6 @@ namespace ApcEpi.Abstractions
         EssentialsDevice Build();
         bool UseEssentialsJoinMap { get;  }
         bool EnableAsOnline { get; }
+        ApDeviceConfig Config { get; }
     }
 }

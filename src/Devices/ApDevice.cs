@@ -12,12 +12,23 @@ using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Bridges;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 using PepperDash_Essentials_Core.Devices;
+using ApcEpi.Config;
 
 
 namespace ApcEpi.Devices
 {
     public class ApDevice : EssentialsBridgeableDevice, IOutletName, IOutletPower, IOutletOnline, IHasControlledPowerOutlets
     {
+        private ApDeviceConfig _config;
+
+        private readonly IBasicCommunication _comms;
+        private readonly string _password = "apc";  // sets default
+        private readonly string _username = "apc";  // sets default
+        private const string DELIMITER = "\r";
+
+        // Used to track the login state of telnet connections
+        private bool _loggedIn = false;
+
         private readonly StatusMonitorBase _monitor;
         public ReadOnlyDictionary<int, IHasPowerCycle> PduOutlets { get; private set; }
         bool _useEssentialsJoinmap;
@@ -26,16 +37,45 @@ namespace ApcEpi.Devices
         public ApDevice(IApDeviceBuilder builder)
             : base(builder.Key, builder.Name)
         {
+            _comms = builder.Coms;
+            _config = builder.Config;
+
+            if (!string.IsNullOrEmpty(_config.Control.TcpSshProperties.Username))
+            {
+                _username = _config.Control.TcpSshProperties.Username;
+            } if (!string.IsNullOrEmpty(_config.Control.TcpSshProperties.Password))
+            {
+                _password = _config.Control.TcpSshProperties.Password;
+            }
+
             Feedbacks = new FeedbackCollection<Feedback>();
 
             PduOutlets = builder.Outlets;
+            //_monitor = new GenericCommunicationMonitor(
+            //    this, 
+            //    builder.Coms, 
+            //    30000, 
+            //    120000, 
+            //    240000,
+            //    ApOutletStatusCommands.GetAllOutletStatusCommand());
             _monitor = new GenericCommunicationMonitor(
-                this, 
-                builder.Coms, 
-                30000, 
-                120000, 
+                this,
+                builder.Coms,
+                30000,
+                120000,
                 240000,
-                ApOutletStatusCommands.GetAllOutletStatusCommand());
+                () =>
+                {
+                    //Debug.Console(2, this, "Polling for status");
+
+                    //Debug.Console(2, this, "Block Poll?: {0}", _config.Control.Method == eControlMethod.Tcpip && !_loggedIn);
+
+                    if (_config.Control.Method == eControlMethod.Tcpip && !_loggedIn) return;
+
+
+                    SendText(ApOutletStatusCommands.GetAllOutletStatusCommand());
+                });
+
              
             NameFeedback = new StringFeedback("DeviceNameFeedback", () => Name);
             Feedbacks.Add(IsOnline);
@@ -43,19 +83,32 @@ namespace ApcEpi.Devices
             EnableAsOnline = builder.EnableAsOnline;
             _useEssentialsJoinmap = builder.UseEssentialsJoinMap;
 
+            _comms.TextReceived += new EventHandler<GenericCommMethodReceiveTextArgs>(_comms_TextReceived);
+
+            //var loginPromptGather = new CommunicationGather(_comms, DELIMITER);
+            //loginPromptGather.LineReceived += _comms_TextReceived;
+
             var gather = new CommunicationGather(builder.Coms, "\n");
             gather.LineReceived +=
-                (o, textArgs) => ProcessResponse(PduOutlets, textArgs.Text);
-
-            /*
+                (o, textArgs) =>
+                {
+                    if (_config.Control.Method == eControlMethod.Tcpip && !_loggedIn) return;
+                    ProcessResponse(PduOutlets, textArgs.Text);
+                };
+       
             var socket = builder.Coms as ISocketStatus;
             if (socket != null)
             {
                 socket.ConnectionChange +=
                     (sender, args) =>
-                        Debug.Console(1, this, Debug.ErrorLogLevel.Notice, "ConnectionStatus:{0}",
-                            args.Client.ClientStatus.ToString());
-            }*/
+                    {
+
+                        if (!socket.IsConnected)
+                        {
+                            _loggedIn = false;
+                        }
+                    };
+            }
 
             CrestronEnvironment.ProgramStatusEventHandler += type =>
             {
@@ -64,33 +117,54 @@ namespace ApcEpi.Devices
 
                 CommunicationMonitor.Stop();
             };
-
-            DeviceManager.AllDevicesActivated += (sender, args) =>
-                {
-                    try
-                    {
-                        builder.Coms.Connect();
-                        CommunicationMonitor.Start();
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.Console(0,
-                            this,
-                            Debug.ErrorLogLevel.Error,
-                            "Error handling all devices activated : {0}",
-                            ex.Message);
-                    }
-                };
         }
 
-        public static void ProcessResponse(ReadOnlyDictionary<int, IHasPowerCycle> outlets, string response)
+        public override void Initialize()
         {
+            _comms.Connect();
+
+            if (_config.Control.Method == eControlMethod.Ssh)
+                CommunicationMonitor.Start();
+        }
+
+        void _comms_TextReceived(object sender, GenericCommMethodReceiveTextArgs e)
+        {
+            if (e.Text.Contains("User Name"))
+            {
+                Debug.Console(2, this, "Attempting to Log in...");
+                SendText(_username);
+                return;
+            }
+            else if (e.Text.Contains("Password"))
+            {
+                SendText(_password);
+                return;
+            }
+            else if (e.Text.Contains("apc>"))
+            {
+                if (!_loggedIn)
+                    Debug.Console(2, this, "Logged in Successfully.");
+
+                _loggedIn = true;
+                CommunicationMonitor.Start();
+            }
+        }
+
+        public void SendText(string text)
+        {
+            _comms.SendText(text + DELIMITER);
+        }
+
+        public void ProcessResponse(ReadOnlyDictionary<int, IHasPowerCycle> outlets, string response)
+        {
+
             var responseToProcess = response.Trim().Split(new[] { ':' });
             if (responseToProcess.Count() != 3)
                 return;
 
             try
             {
+
                 var outletIndex = Convert.ToUInt32(responseToProcess[0]);
                 IHasPowerCycle outlet;
                 if (!outlets.TryGetValue((int)outletIndex, out outlet))
@@ -116,7 +190,7 @@ namespace ApcEpi.Devices
             }
             catch (Exception ex)
             {
-                Debug.Console(1, "Error processing response: {0}{1}", response, ex.Message);
+                Debug.Console(1, this, "Error processing response: {0}{1}", response, ex.Message);
             }
         }
 

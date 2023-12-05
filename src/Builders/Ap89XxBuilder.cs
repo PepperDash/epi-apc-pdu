@@ -13,11 +13,14 @@ namespace ApcEpi.Builders
 {
     public class Ap89XxBuilder : IApDeviceBuilder
     {
+        public ApDeviceConfig Config { get; private set; }
+
         private Ap89XxBuilder(string key, string name, IBasicCommunication coms, ApDeviceConfig config)
         {
             Coms = coms;
             Name = name;
             Key = key;
+            Config = config;
 
             UseEssentialsJoinMap = config.UseEssentialsJoinmap;
             Outlets = BuildOutletsFromConfig(key, config, coms);

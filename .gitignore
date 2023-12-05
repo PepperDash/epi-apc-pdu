@@ -363,3 +363,4 @@ MigrationBackup/
 *.projectinfo
 
 SPlsWork/
+src/Properties/ApcEpi.cplz
