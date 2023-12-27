@@ -1,16 +1,15 @@
-﻿using System;
-using ApcEpi.Abstractions;
-using ApcEpi.Services.NameCommands;
-using Crestron.SimplSharp;
+﻿using Crestron.SimplSharp;
 using PepperDash.Core;
+using PepperDash.Essentials.Apc.Commands.NameCommands;
+using PepperDash.Essentials.Apc.Interfaces;
 using PepperDash.Essentials.Core;
-using PepperDash_Essentials_Core.Devices;
+using System;
 
 
-namespace ApcEpi.Entities.Outlet
+namespace PepperDash.Essentials.Apc.Entities.Outlet
 {
 
-    public class ApOutlet : IApOutlet
+    public class ApcOutlet : IApcOutlet
     {
         private readonly ApOutletOnline _online;
         private readonly ApOutletPower _power;
@@ -18,15 +17,15 @@ namespace ApcEpi.Entities.Outlet
         private readonly CTimer _powerCycleTimer;
 
 
-        public ApOutlet(string key, string name, int outletIndex, string parentDeviceKey, IBasicCommunication coms, int powerCycleTimeMs)
+        public ApcOutlet(string key, string name, int outletIndex, string parentDeviceKey, IBasicCommunication coms, int powerCycleTimeMs)
         {
             Key = parentDeviceKey + "-" + key;
             Name = name;
             OutletIndex = outletIndex;
             PowerCycleTimeMs = powerCycleTimeMs;
             NameFeedback = new StringFeedback(
-                name, 
-                () => String.IsNullOrEmpty(Name) ? string.Empty : Name);
+                name,
+                () => string.IsNullOrEmpty(Name) ? string.Empty : Name);
 
             _online = new ApOutletOnline(key, name, outletIndex);
             _power = new ApOutletPower(key, name, outletIndex, coms);
@@ -39,7 +38,7 @@ namespace ApcEpi.Entities.Outlet
                     if (!args.Client.IsConnected)
                         return;
 
-                    ApOutletNameCommands.GetOutletNameCommand(outletIndex, key);
+                    ApcOutletNameCommands.GetOutletNameCommand(outletIndex, key);
 
                 };
             }

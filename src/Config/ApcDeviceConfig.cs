@@ -1,25 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Crestron.SimplSharp;
-using Crestron.SimplSharpPro;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using PepperDash.Core;
+using System.Collections.Generic;
 
-namespace ApcEpi.Config
+namespace PepperDash.Essentials.Apc.Config
 {
-    public class ApDeviceConfig
+    public class ApcDeviceConfig
     {
         public ControlPropertiesConfig Control { get; set; }
         public int PowerCycleTimeMs { get; set; }
-        public Dictionary<string, ApOutletConfig> Outlets { get; set; }
+        public Dictionary<string, ApcOutletConfig> Outlets { get; set; }
         public bool UseEssentialsJoinmap { get; set; }
         [JsonProperty("enableOutletsOverride")]
         public bool EnableOutletsOverride { get; set; }
     }
 
-    public class ApOutletConfig
+    public class ApcOutletConfig
     {
         public string Name { get; set; }
         public int OutletIndex { get; set; }

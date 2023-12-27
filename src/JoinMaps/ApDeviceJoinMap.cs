@@ -1,24 +1,24 @@
 ﻿using PepperDash.Essentials.Core;
 
-namespace ApcEpi.JoinMaps
+namespace PepperDash.Essentials.Apc.JoinMaps
 {
     public class ApDeviceJoinMap : JoinMapBaseAdvanced
     {
-        [JoinName("DeviceName")] 
+        [JoinName("DeviceName")]
         public JoinDataComplete DeviceName = new JoinDataComplete(
             new JoinData
-                {
-                    JoinNumber = 1, 
-                    JoinSpan = 1
-                },
+            {
+                JoinNumber = 1,
+                JoinSpan = 1
+            },
             new JoinMetadata
-                {
-                    Description = "Device Name",
-                    JoinCapabilities = eJoinCapabilities.ToSIMPL,
-                    JoinType = eJoinType.Serial
-                });
+            {
+                Description = "Device Name",
+                JoinCapabilities = eJoinCapabilities.ToSIMPL,
+                JoinType = eJoinType.Serial
+            });
 
-        [JoinName("DeviceOnline")] 
+        [JoinName("DeviceOnline")]
         public JoinDataComplete DeviceOnline = new JoinDataComplete(
             new JoinData
             {
@@ -32,7 +32,7 @@ namespace ApcEpi.JoinMaps
                 JoinType = eJoinType.Digital
             });
 
-        [JoinName("OutletName")] 
+        [JoinName("OutletName")]
         public JoinDataComplete OutletName = new JoinDataComplete(
             new JoinData
             {
@@ -46,7 +46,7 @@ namespace ApcEpi.JoinMaps
                 JoinType = eJoinType.Serial
             });
 
-        [JoinName("OutletOnline")] 
+        [JoinName("OutletOnline")]
         public JoinDataComplete OutletOnline = new JoinDataComplete(
             new JoinData
             {
@@ -60,7 +60,7 @@ namespace ApcEpi.JoinMaps
                 JoinType = eJoinType.Digital
             });
 
-        [JoinName("OutletPowerOn")] 
+        [JoinName("OutletPowerOn")]
         public JoinDataComplete OutletPowerOn = new JoinDataComplete(
             new JoinData
             {
@@ -74,7 +74,7 @@ namespace ApcEpi.JoinMaps
                 JoinType = eJoinType.Digital
             });
 
-        [JoinName("OutletPowerOff")] 
+        [JoinName("OutletPowerOff")]
         public JoinDataComplete OutletPowerOff = new JoinDataComplete(
             new JoinData
             {
@@ -88,7 +88,7 @@ namespace ApcEpi.JoinMaps
                 JoinType = eJoinType.Digital
             });
 
-        [JoinName("OutletPowerToggle")] 
+        [JoinName("OutletPowerToggle")]
         public JoinDataComplete OutletPowerToggle = new JoinDataComplete(
             new JoinData
             {

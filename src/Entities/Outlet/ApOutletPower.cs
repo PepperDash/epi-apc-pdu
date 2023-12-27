@@ -1,10 +1,10 @@
-﻿using ApcEpi.Services.PowerCommands;
-using ApcEpi.Services.StatusCommands;
-using Crestron.SimplSharp;
+﻿using Crestron.SimplSharp;
 using PepperDash.Core;
+using PepperDash.Essentials.Apc.Commands.PowerCommands;
+using PepperDash.Essentials.Apc.Commands.StatusCommands;
 using PepperDash.Essentials.Core;
 
-namespace ApcEpi.Entities.Outlet
+namespace PepperDash.Essentials.Apc.Entities.Outlet
 {
     public class ApOutletPower : IHasPowerControlWithFeedback, IKeyName
     {
@@ -25,11 +25,11 @@ namespace ApcEpi.Entities.Outlet
                 key + "-Power",
                 () => _powerIsOn);
 
-            var pollCommand = ApOutletStatusCommands.GetOutletStatusCommand(outletIndex);
+            var pollCommand = ApcOutletStatusCommands.GetOutletStatusCommand(outletIndex);
             _poll = new CTimer(o => coms.SendText(pollCommand), Timeout.Infinite);
 
-            _powerOnCommand = ApOutletPowerCommands.GetPowerOnCommand(outletIndex);
-            _powerOffCommand = ApOutletPowerCommands.GetPowerOffCommand(outletIndex);
+            _powerOnCommand = ApcOutletPowerCommands.GetPowerOnCommand(outletIndex);
+            _powerOffCommand = ApcOutletPowerCommands.GetPowerOffCommand(outletIndex);
         }
 
         public string Key { get; private set; }

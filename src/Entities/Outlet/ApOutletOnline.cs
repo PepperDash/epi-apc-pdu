@@ -3,7 +3,7 @@ using Crestron.SimplSharp;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 
-namespace ApcEpi.Entities.Outlet
+namespace PepperDash.Essentials.Apc.Entities.Outlet
 {
     public class ApOutletOnline : IOnline, IKeyName
     {
@@ -16,7 +16,7 @@ namespace ApcEpi.Entities.Outlet
         {
             Key = key;
             Name = name;
-            _matchString = ApOutlet.GetMatchString(outletIndex);
+            _matchString = ApcOutlet.GetMatchString(outletIndex);
 
             IsOnline = new BoolFeedback(
                 key + "-Online",

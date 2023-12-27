@@ -1,8 +1,8 @@
 using PepperDash.Essentials.Core;
 
-namespace ApcEpi.Abstractions
+namespace PepperDash.Essentials.Apc.Interfaces
 {
-    public interface IOutletName : IApDevice
+    public interface IOutletName : IApcDevice
     {
         bool TryGetOutletNameFeedback(uint outletIndex, out StringFeedback result);
     }
