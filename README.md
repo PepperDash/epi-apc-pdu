@@ -1,6 +1,6 @@
 # PepperDash Apc Plugin
 
-> The APC plugin endeavors to provide device control and routing over Apc Type Power devices.
+This Essentials plugin provides outlet control for Apc Type Power devices.
 
 ## Types
 
@@ -55,8 +55,6 @@
     "group": "power",
     "properties": {
         "control": {
-            "endOfLineString": "\n",
-            "deviceReadyResponsePattern": "",
             "method": "ssh",
             "tcpSshProperties": {
                 "address": "0.0.0.0",

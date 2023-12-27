@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ProjectType>ProgramLibrary</ProjectType>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace>PepperDash.Essentials.Apc</RootNamespace>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyTitle>ApcDevice</AssemblyTitle>
+    <Company>PepperDash</Company>
+    <Product>epi.pdu.apc</Product>
+    <Copyright>Copyright © 2020</Copyright>
+    <Version>2.0.0</Version>
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <Authors>PepperDash Technologies</Authors>
+    <PackageId>PepperDash.Essentials.Plugin.ApcPdu</PackageId>
+    <PackageProjectUrl>https://github.com/PepperDash/epi-apc-pdu</PackageProjectUrl>
+    <PackageTags>crestron 4series essentials pepperdash pepperdashessentials epi essentials plugin</PackageTags>
+    <Title>APC PDU Essentials Plugin</Title>
+    <RepositoryUrl>https://github.com/PepperDash/epi-apc-pdu</RepositoryUrl>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Crestron.SimplSharp.SDK.ProgramLibrary" Version="2.20.42" />
+    <PackageReference Include="PepperDashEssentials" Version="1.15.4" />
+    <PackageReference Include="SSH.NET" Version="2023.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="../output\epi-apc-pdu.2.0.0.cplz" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="../output\epi-apc-pdu.2.0.0.cplz" />
+  </ItemGroup>
+</Project>
