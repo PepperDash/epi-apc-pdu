@@ -331,8 +331,11 @@ namespace ApcEpi.Devices
                     if (!TryGetOutletPowerFeedback(outletIndex, out feedback))
                         continue;
 
+                   
+
                     var joinActual = outletIndex + joinMap.OutletPowerOff.JoinNumber;
 
+                    feedback.LinkComplementInputSig(trilist.BooleanInput[joinActual]);
                     Debug.Console(2, this, "Linking Outlet PowerOff Method | OutletIndex:{0}, Join:{1}", outletIndex,
                         joinActual);
                     trilist.SetSigTrueAction(joinActual, () => TurnOutletOff(outletIndex));
