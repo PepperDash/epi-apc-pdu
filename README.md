@@ -98,3 +98,5 @@ __Properties:__
 
 1. Create a custom StatusMonitor to get more detailed infomation
 1. Add ability to set on/off delays by outlet
+
+
