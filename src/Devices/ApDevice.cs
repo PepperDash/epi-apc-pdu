@@ -292,24 +292,6 @@ namespace ApcEpi.Devices
                     feedback.LinkInputSig(trilist.StringInput[joinActual]);
                 }
 
-                for (uint x = 0; x < joinMap.OutletOnline.JoinSpan; x++)
-                {
-                    var outletIndex = x + 1;
-                    var joinActual = outletIndex + joinMap.OutletName.JoinNumber;
-
-                    if (!EnableAsOnline)
-                    {
-                        BoolFeedback feedback;
-                        if (!TryGetOutletOnlineFeedback(outletIndex, out feedback))
-                            continue;
-                        Debug.Console(2, this, "Linking Outlet Online Feedback | OutletIndex:{0}, Join:{1}", outletIndex,
-                            joinActual);
-                        feedback.LinkInputSig(trilist.BooleanInput[joinActual]);
-                        continue;
-                    }
-                    trilist.BooleanInput[joinActual].BoolValue = PduOutlets.ContainsKey((int)outletIndex);
-
-                }
 
                 for (uint x = 0; x < joinMap.OutletPowerOn.JoinSpan; x++)
                 {

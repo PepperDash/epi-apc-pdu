@@ -46,20 +46,6 @@ namespace ApcEpi.JoinMaps
                 JoinType = eJoinType.Serial
             });
 
-        [JoinName("OutletOnline")] 
-        public JoinDataComplete OutletOnline = new JoinDataComplete(
-            new JoinData
-            {
-                JoinNumber = 50,
-                JoinSpan = 50
-            },
-            new JoinMetadata
-            {
-                Description = "Outlet Online",
-                JoinCapabilities = eJoinCapabilities.ToSIMPL,
-                JoinType = eJoinType.Digital
-            });
-
         [JoinName("OutletPowerOn")] 
         public JoinDataComplete OutletPowerOn = new JoinDataComplete(
             new JoinData
