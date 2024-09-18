@@ -21,7 +21,7 @@ namespace ApcEpi.Entities.Outlet
         public ApOutlet(string key, string name, int outletIndex, string parentDeviceKey, IBasicCommunication coms, int powerCycleTimeMs)
         {
             Key = parentDeviceKey + "-" + key;
-            Name = name;
+            
             OutletIndex = outletIndex;
             PowerCycleTimeMs = powerCycleTimeMs;
             NameFeedback = new StringFeedback(
@@ -30,6 +30,8 @@ namespace ApcEpi.Entities.Outlet
 
             _online = new ApOutletOnline(key, name, outletIndex);
             _power = new ApOutletPower(key, name, outletIndex, coms);
+
+            Name = name;
 
             var socket = coms as ISocketStatus;
             if (socket != null)
@@ -52,7 +54,19 @@ namespace ApcEpi.Entities.Outlet
         }
 
         public string Key { get; private set; }
-        public string Name { get; private set; }
+        private string _Name { get; set; } 
+        public string Name 
+        { 
+            get
+            {
+                return _Name;   
+            }
+            set
+            {
+                _Name = value;
+                NameFeedback.FireUpdate();
+            }
+        }
         public StringFeedback NameFeedback { get; private set; }
 
         public int OutletIndex { get; private set; }

@@ -15,8 +15,12 @@ namespace ApcEpi.Config
         public int PowerCycleTimeMs { get; set; }
         public Dictionary<string, ApOutletConfig> Outlets { get; set; }
         public bool UseEssentialsJoinmap { get; set; }
+
         [JsonProperty("enableOutletsOverride")]
         public bool EnableOutletsOverride { get; set; }
+
+        [JsonProperty("useConfigOutletNames")]
+        public bool useConfigOutletNames { get; set; }
     }
 
     public class ApOutletConfig

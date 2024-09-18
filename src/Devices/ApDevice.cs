@@ -171,6 +171,11 @@ namespace ApcEpi.Devices
                     return;
                 var apOutlet = outlet as IApOutlet;
                 if (apOutlet == null) return;
+                if (_config.useConfigOutletNames == false)
+                {
+                    (apOutlet as ApOutlet).Name = responseToProcess[1];
+                }
+
                 if (responseToProcess[2].Contains("On"))
                 {
                     apOutlet.PowerStatus = true;

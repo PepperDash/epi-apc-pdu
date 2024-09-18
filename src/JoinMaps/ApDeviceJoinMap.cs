@@ -36,8 +36,8 @@ namespace ApcEpi.JoinMaps
         public JoinDataComplete OutletName = new JoinDataComplete(
             new JoinData
             {
-                JoinNumber = 50,
-                JoinSpan = 50
+                JoinNumber = 10,
+                JoinSpan = 20
             },
             new JoinMetadata
             {
@@ -64,8 +64,8 @@ namespace ApcEpi.JoinMaps
         public JoinDataComplete OutletPowerOn = new JoinDataComplete(
             new JoinData
             {
-                JoinNumber = 100,
-                JoinSpan = 50
+                JoinNumber = 20,
+                JoinSpan = 20
             },
             new JoinMetadata
             {
@@ -78,8 +78,8 @@ namespace ApcEpi.JoinMaps
         public JoinDataComplete OutletPowerOff = new JoinDataComplete(
             new JoinData
             {
-                JoinNumber = 150,
-                JoinSpan = 50
+                JoinNumber = 40,
+                JoinSpan = 20
             },
             new JoinMetadata
             {
@@ -92,8 +92,8 @@ namespace ApcEpi.JoinMaps
         public JoinDataComplete OutletPowerToggle = new JoinDataComplete(
             new JoinData
             {
-                JoinNumber = 200,
-                JoinSpan = 50
+                JoinNumber = 60,
+                JoinSpan = 20
             },
             new JoinMetadata
             {
