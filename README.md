@@ -8,35 +8,29 @@
 
 ## Join Map
 
+## Join Map
+
 ### Digitals
 
-| Join    | To Simpl               | From Simpl               |
-| ------- | ---------------------- | ------------------------ |
-| 1       | Device Online          | -                        |
-| 2-50    | Reserved For Future    | Reserved For Future      |
-| 51-100  | Power On Feedback      | Power On                 |
-| 100-151 | -                      | Power Off                |
-| 151-200 | -                      | Power Toggle             |
+| Join   | To Simpl                 | From Simpl          |
+| ------ | ------------------------ | ------------------- |
+| 1      | Device Online            | -                   |
+| 20-39  | Outlet Power On Feedback | Outlet Power On     |
+| 40-59  | -                        | Outlet Power Off    |
+| 60-79  | -                        | Outlet Power Toggle |
 
 ### Analogs
 
-| Join    | To Simpl               | From Simpl               |
-| ------- | ---------------------- | ------------------------ |
-| 1       | -                      | -                        |
-| 2-50    | -                      | -                        |
-| 51-100  | -                      | -                        |
-| 100-151 | -                      | -                        |
-| 151-200 | -                      | -                        |
+| Join  | To Simpl | From Simpl |
+| ----- | -------- | ---------- |
+| 1-200 | -        | -          |
 
 ### Serials
 
-| Join    | To Simpl               | From Simpl               |
-| ------- | ---------------------- | ------------------------ |
-| 1       | Device Name            | -                        |
-| 2-50    | -                      | -                        |
-| 51-100  | Outlet Name            | -                        |
-| 100-151 | -                      | -                        |
-| 151-200 | -                      | -                        |
+| Join   | To Simpl    | From Simpl |
+| ------ | ----------- | ---------- |
+| 1      | Device Name | -          |
+| 10-29  | Outlet Name | -          |
 
 ### Join Details
 
